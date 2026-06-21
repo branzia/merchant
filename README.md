@@ -192,6 +192,4 @@ This project is open-source and available under the [MIT License](./LICENSE).
 ## Links
 
 - [Branzia Website](https://branzia.app)
-- [Buyer App](#) _(coming soon)_
 - [Web Dashboard](https://branzia.app/merchant)
-- [Report an Issue](https://github.com/your-org/branzia-merchant/issues)
