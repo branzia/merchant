@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomTabBar from '@/components/BottomTabBar';
 
 type DeliveryType = 'flat' | 'zone' | 'free';
 
@@ -200,7 +201,7 @@ export default function DeliveryScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
           <Text className="text-2xl">←</Text>
@@ -416,6 +417,8 @@ export default function DeliveryScreen() {
           <View className="h-4" />
         </View>
       </ScrollView>
+
+      <BottomTabBar activeTab="settings" />
 
       {/* Zone Modal */}
       <Modal visible={zoneModal} transparent animationType="slide">

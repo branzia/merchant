@@ -6,11 +6,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
 import { useDrawer } from '@/context/DrawerContext';
+import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProductsScreen() {
   const router = useRouter();
   const { openDrawer } = useDrawer();
+  const { merchant } = useAuth();
+  const currencySymbol = merchant?.currency_symbol ?? '';
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +167,7 @@ export default function ProductsScreen() {
                           {product.name}
                         </Text>
                         <Text className="text-sm font-bold text-indigo-600 shrink-0">
-                          {Number(product.price).toFixed(0)}
+                          {currencySymbol}{Number(product.price).toFixed(0)}
                         </Text>
                       </View>
                       {product.category && (

@@ -9,6 +9,7 @@ This app talks to the Branzia REST API — it does NOT talk to any database dire
 
 | Screen | Description |
 |--------|-------------|
+| Shop Opening Request | Name, shop name, email, phone, plan → opens WhatsApp with pre-filled message to Branzia team |
 | Login | Email/phone + password → get Bearer token |
 | Dashboard | Stats overview + recent orders |
 | Orders List | All orders, filterable by status/date/search |
@@ -46,6 +47,53 @@ Token is obtained from the login endpoint and must be stored securely on device 
 ---
 
 ## Auth Endpoints
+
+### Shop Opening Request (WhatsApp — no API call)
+
+**No API endpoint.** This is handled entirely on the client side using a WhatsApp deep link.
+
+**Branzia WhatsApp Number:** `+91 73587 20104`
+
+#### Flow
+1. Merchant fills the form: name, shop name, email, phone, plan, (optional) message
+2. App builds a pre-filled WhatsApp message
+3. App opens WhatsApp using the deep link — merchant just taps **Send**
+4. Branzia team receives the message and manually registers the merchant at `https://branzia.app/merchant/register`
+
+#### Deep link format
+```
+https://wa.me/917358720104?text={URL_ENCODED_MESSAGE}
+```
+
+#### Pre-filled message template
+```
+Hi Branzia! I'd like to open my shop.
+
+Name: Ravi Kumar
+Shop Name: Ravi Cakes
+Email: ravi@example.com
+Phone: +91 9876543210
+Plan: Growth
+Message: I sell custom cakes
+```
+
+#### Form fields to collect
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | Full name |
+| `shop_name` | yes | Business name |
+| `email` | yes | Contact email |
+| `phone` | yes | Phone number with country code |
+| `plan` | yes | Picker: Starter / Growth / Pro |
+| `message` | no | Any additional note |
+
+#### UI Notes
+- Button label: **"Send via WhatsApp"**
+- If WhatsApp is not installed, fall back to opening `https://web.whatsapp.com/send?phone=...` in browser
+- Show a confirmation screen after WhatsApp opens: *"Your request has been sent! Our team will contact you within 24 hours."*
+
+---
 
 ### Login
 ```
@@ -261,7 +309,7 @@ Authorization: Bearer {token}
     "name": "Priya Sharma",
     "phone": "9876543210"
   },
-  "unread_messages": 0,
+  "unread_messages": 0,          // count of unread buyer messages
   "created_at": "2026-06-19T10:30:00.000000Z",
   "updated_at": "2026-06-19T10:35:00.000000Z"
 }
@@ -1073,7 +1121,9 @@ Marks all unread **buyer** messages in this order as read. Call when the merchan
 ---
 
 ### Push Notifications for New Messages
-When a buyer sends a message, the merchant's FCM token receives a push notification (same FCM infrastructure already in place for order notifications). `data.url` points to the order detail page so tapping the notification opens the right order.
+When a buyer sends a message, the merchant's FCM token receives a push notification. `data.url` points to `/merchant/orders/{id}` so tapping the notification opens the right order.
+
+> FCM is sent automatically by the server — no extra setup needed in the app.
 
 ### UI Notes
 - Show a chat icon/button on the Order Detail screen
@@ -1161,6 +1211,7 @@ All paginated responses follow Laravel's standard structure:
 
 These features exist in the web dashboard but do NOT have mobile API endpoints yet:
 
+- Merchant self-registration (use WhatsApp deep link instead — see Shop Opening Request above)
 - Razorpay / Stripe gateway connection & onboarding (KYC, embedded onboarding)
 - Settlement / payout history
 - Shiprocket shipping integration

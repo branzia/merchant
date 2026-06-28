@@ -11,7 +11,7 @@
       "supportsTablet": true
     },
     "android": {
-      "newArchEnabled": true,
+      "newArchEnabled": false,
       "package": "com.branzia.merchant",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -27,6 +27,13 @@
     "plugins": [
       "expo-secure-store",
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b581a1f4-ba6a-4c3f-9850-22ddfa1ad3d9"
+      }
+    },
+    "owner": "itsvishwa01"
   }
 }

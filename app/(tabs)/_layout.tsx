@@ -1,21 +1,19 @@
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import {
-  View, Text, TouchableOpacity, Animated, Dimensions, Image, Alert,
+  View, Text, TouchableOpacity, Animated, Dimensions, Image, Alert, Linking,
 } from 'react-native';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerProvider, useDrawer } from '@/context/DrawerContext';
 import { useAuth } from '@/context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import * as api from '@/services/api';
 
 const DRAWER_WIDTH = Math.min(Dimensions.get('window').width * 0.82, 320);
 
-const NAV_ITEMS = [
-  { href: '/(tabs)/',           label: 'Home',        emoji: '🏠', match: '/'           },
-  { href: '/(tabs)/orders',     label: 'Orders',      emoji: '📋', match: '/orders'     },
-  { href: '/(tabs)/products',   label: 'Products',    emoji: '📦', match: '/products'   },
-  { href: '/(tabs)/categories', label: 'Categories',  emoji: '🏷️', match: '/categories' },
+const DRAWER_NAV_ITEMS = [
+  { href: '/(tabs)/categories', label: 'Categories', emoji: '🏷️', match: '/categories' },
   { href: '/(tabs)/attributes', label: 'Attributes',  emoji: '🎛️', match: '/attributes' },
-  { href: '/(tabs)/settings',   label: 'Settings',    emoji: '⚙️', match: '/settings'   },
 ];
 
 function DrawerPanel() {
@@ -30,35 +28,23 @@ function DrawerPanel() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(translateX, {
-        toValue: isOpen ? 0 : -DRAWER_WIDTH,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: isOpen ? 1 : 0,
-        duration: 260,
-        useNativeDriver: true,
-      }),
+      Animated.timing(translateX, { toValue: isOpen ? 0 : -DRAWER_WIDTH, duration: 260, useNativeDriver: true }),
+      Animated.timing(backdropOpacity, { toValue: isOpen ? 1 : 0, duration: 260, useNativeDriver: true }),
     ]).start();
   }, [isOpen]);
 
-  const navigate = (href: string) => {
-    closeDrawer();
-    router.push(href as any);
-  };
+  const navigate = (href: string) => { closeDrawer(); router.push(href as any); };
 
   const handleLogout = () => {
     closeDrawer();
-    Alert.alert('Logout', 'Are you sure?', [
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: signOut },
+      { text: 'Sign Out', style: 'destructive', onPress: signOut },
     ]);
   };
 
   return (
     <>
-      {/* Backdrop */}
       <Animated.View
         pointerEvents={isOpen ? 'auto' : 'none'}
         style={{
@@ -71,7 +57,6 @@ function DrawerPanel() {
         <TouchableOpacity style={{ flex: 1 }} onPress={closeDrawer} activeOpacity={1} />
       </Animated.View>
 
-      {/* Slide panel */}
       <Animated.View
         style={{
           position: 'absolute', top: 0, left: 0, bottom: 0,
@@ -81,33 +66,30 @@ function DrawerPanel() {
           transform: [{ translateX }],
           shadowColor: '#000',
           shadowOffset: { width: 6, height: 0 },
-          shadowOpacity: 0.12,
+          shadowOpacity: 0.10,
           shadowRadius: 16,
           elevation: 12,
         }}
       >
         <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
 
-          {/* ── Store header ── */}
-          <View style={{ paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+          {/* Store header */}
+          <View style={{ paddingHorizontal: 20, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               {merchant?.logo ? (
-                <Image
-                  source={{ uri: merchant.logo }}
-                  style={{ width: 54, height: 54, borderRadius: 27 }}
-                />
+                <Image source={{ uri: merchant.logo }} style={{ width: 52, height: 52, borderRadius: 26 }} />
               ) : (
                 <View style={{
-                  width: 54, height: 54, borderRadius: 27,
+                  width: 52, height: 52, borderRadius: 26,
                   backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: '#4F46E5' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#4F46E5' }}>
                     {(merchant?.shop_name ?? 'B')[0].toUpperCase()}
                   </Text>
                 </View>
               )}
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
                   {merchant?.shop_name ?? 'My Store'}
                 </Text>
                 {merchant?.slug && (
@@ -118,21 +100,17 @@ function DrawerPanel() {
               </View>
             </View>
 
-            {/* Open / Closed status + Visit Store */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 6,
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
                 backgroundColor: merchant?.is_open ? '#F0FDF4' : '#FEF2F2',
               }}>
                 <View style={{
                   width: 6, height: 6, borderRadius: 3,
                   backgroundColor: merchant?.is_open ? '#22C55E' : '#EF4444',
                 }} />
-                <Text style={{
-                  fontSize: 12, fontWeight: '600',
-                  color: merchant?.is_open ? '#15803D' : '#DC2626',
-                }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: merchant?.is_open ? '#15803D' : '#DC2626' }}>
                   {merchant?.is_open ? 'Open' : 'Closed'}
                 </Text>
               </View>
@@ -141,24 +119,29 @@ function DrawerPanel() {
                   onPress={() => Linking.openURL(`https://branzia.app/store/${merchant.slug}`)}
                   activeOpacity={0.7}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
-                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
                     backgroundColor: '#EEF2FF',
                   }}
                 >
                   <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>Visit Store</Text>
-                  <Text style={{ fontSize: 10, color: '#6366F1' }}>↗</Text>
+                  <Text style={{ fontSize: 10, color: '#818CF8' }}>↗</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          {/* ── Nav items ── */}
-          <View style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 10 }}>
-            {NAV_ITEMS.map(item => {
-              const active = item.match === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.match);
+          {/* Section label */}
+          <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 6 }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              More
+            </Text>
+          </View>
+
+          {/* Secondary nav items */}
+          <View style={{ paddingHorizontal: 10 }}>
+            {DRAWER_NAV_ITEMS.map(item => {
+              const active = pathname.startsWith(item.match);
               return (
                 <TouchableOpacity
                   key={item.href}
@@ -171,41 +154,30 @@ function DrawerPanel() {
                     backgroundColor: active ? '#EEF2FF' : 'transparent',
                   }}
                 >
-                  <Text style={{ fontSize: 20 }}>{item.emoji}</Text>
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    fontWeight: active ? '700' : '500',
-                    color: active ? '#4F46E5' : '#374151',
-                  }}>
+                  <Text style={{ fontSize: 19 }}>{item.emoji}</Text>
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: active ? '700' : '500', color: active ? '#4F46E5' : '#374151' }}>
                     {item.label}
                   </Text>
-                  {active && (
-                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4F46E5' }} />
-                  )}
+                  {active && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4F46E5' }} />}
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* ── Footer ── */}
+          <View style={{ flex: 1 }} />
+
+          {/* Footer */}
           <View style={{
-            paddingHorizontal: 20,
-            paddingBottom: insets.bottom + 20,
-            paddingTop: 16,
-            borderTopWidth: 1,
-            borderTopColor: '#F3F4F6',
+            paddingHorizontal: 20, paddingBottom: insets.bottom + 20,
+            paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6',
           }}>
             {merchant?.subscription_plan && (
               <TouchableOpacity
-                onPress={() => {
-                  closeDrawer();
-                  router.push('/subscription' as any);
-                }}
+                onPress={() => { closeDrawer(); router.push('/subscription' as any); }}
                 activeOpacity={0.75}
                 style={{
                   backgroundColor: '#EEF2FF', borderRadius: 14,
-                  paddingHorizontal: 14, paddingVertical: 11, marginBottom: 14,
+                  paddingHorizontal: 14, paddingVertical: 11, marginBottom: 12,
                   flexDirection: 'row', alignItems: 'center',
                 }}
               >
@@ -221,7 +193,7 @@ function DrawerPanel() {
                     </Text>
                   )}
                 </View>
-                <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '600' }}>Upgrade ↗</Text>
+                <Text style={{ fontSize: 13, color: '#4F46E5', fontWeight: '600' }}>Upgrade ↗</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -233,8 +205,8 @@ function DrawerPanel() {
                 borderRadius: 14, backgroundColor: '#FEF2F2',
               }}
             >
-              <Text style={{ fontSize: 18 }}>🚪</Text>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#DC2626' }}>Logout</Text>
+              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#DC2626' }}>Sign Out</Text>
             </TouchableOpacity>
           </View>
 
@@ -245,21 +217,92 @@ function DrawerPanel() {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    api.getDashboard().then(res => {
+      if (res.status === 200) {
+        setPendingCount(res.data.status_counts?.pending ?? 0);
+      }
+    });
+  }, []);
+
+  const tabBarHeight = 56 + Math.max(insets.bottom, 8);
+
   return (
     <DrawerProvider>
       <View style={{ flex: 1 }}>
         <Tabs
           screenOptions={{
             headerShown: false,
-            tabBarStyle: { display: 'none' },
+            tabBarStyle: {
+              backgroundColor: '#FFFFFF',
+              borderTopWidth: 1,
+              borderTopColor: '#F3F4F6',
+              paddingTop: 6,
+              paddingBottom: Math.max(insets.bottom, 8),
+              height: tabBarHeight,
+              elevation: 4,
+              shadowColor: '#000',
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: -2 },
+            },
+            tabBarActiveTintColor: '#4F46E5',
+            tabBarInactiveTintColor: '#9CA3AF',
+            tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 1 },
           }}
         >
-          <Tabs.Screen name="index" />
-          <Tabs.Screen name="orders" />
-          <Tabs.Screen name="products" />
-          <Tabs.Screen name="categories" />
-          <Tabs.Screen name="attributes" />
-          <Tabs.Screen name="settings" />
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Home',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="orders"
+            options={{
+              title: 'Orders',
+              tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+              tabBarBadgeStyle: {
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                fontSize: 10,
+                fontWeight: '700',
+                minWidth: 18,
+                height: 18,
+                lineHeight: 14,
+                paddingHorizontal: 4,
+              },
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="products"
+            options={{
+              title: 'Products',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'bag' : 'bag-outline'} size={22} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen name="categories" options={{ href: null }} />
+          <Tabs.Screen name="attributes" options={{ href: null }} />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: 'Settings',
+              tabBarIcon: ({ color, focused }) => (
+                <Ionicons name={focused ? 'settings' : 'settings-outline'} size={22} color={color} />
+              ),
+            }}
+          />
         </Tabs>
         <DrawerPanel />
       </View>

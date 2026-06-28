@@ -10,11 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import * as api from '@/services/api';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
+  const router = useRouter();
   const [loginVal, setLoginVal] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -121,6 +123,17 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Register link */}
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/register')}
+            className="items-center mt-6"
+          >
+            <Text className="text-gray-500 text-sm">
+              Want to open a shop?{' '}
+              <Text className="text-indigo-600 font-medium">Get started</Text>
+            </Text>
+          </TouchableOpacity>
 
         </View>
       </ScrollView>

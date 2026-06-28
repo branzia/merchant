@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomTabBar from '@/components/BottomTabBar';
 
 const DAY_NAMES: Record<string, string> = {
   '1': 'Monday', '2': 'Tuesday', '3': 'Wednesday', '4': 'Thursday',
@@ -64,7 +65,7 @@ export default function BusinessHoursScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
           <Text className="text-2xl">←</Text>
@@ -135,6 +136,8 @@ export default function BusinessHoursScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <BottomTabBar activeTab="settings" />
     </SafeAreaView>
   );
 }

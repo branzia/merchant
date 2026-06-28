@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomTabBar from '@/components/BottomTabBar';
 
 export default function LogoScreen() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function LogoScreen() {
   const displayUri = newImage?.uri ?? merchant?.logo;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
           <Text className="text-2xl">←</Text>
@@ -110,6 +111,8 @@ export default function LogoScreen() {
 
         <Text className="text-xs text-gray-400 mt-4">Square image recommended · Max 5MB</Text>
       </View>
+
+      <BottomTabBar activeTab="settings" />
     </SafeAreaView>
   );
 }

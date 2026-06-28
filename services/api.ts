@@ -301,22 +301,20 @@ export const registerFcmToken = (token: string) =>
 
 export const removeFcmToken = () => request('DELETE', '/fcm-token');
 
-// ─── Subscription  (5 min TTL, invalidated on successful upgrade) ─────────────
+// ─── Billing  (5 min TTL, invalidated on successful plan change) ──────────────
 
 export const getSubscription = () =>
-  getCached('subscription', 5 * 60_000, () => request('GET', '/subscription'));
+  getCached('subscription', 5 * 60_000, () => request('GET', '/billing'));
 
 export const initiateSubscription = (plan: string, cycle: 'monthly' | 'yearly') =>
-  request('POST', '/subscription/initiate', { plan, cycle } as any);
+  request('POST', '/billing/initiate', { plan, cycle } as any);
 
 export const verifySubscription = (data: {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-  plan: string;
-  cycle: string;
+  order_id: string;
+  payment_id: string;
+  signature: string;
 }) => {
-  const res = request('POST', '/subscription/verify', data as any);
+  const res = request('POST', '/billing/verify', data as any);
   res.then((r) => { if (r.status === 200) { invalidate('subscription'); invalidate('settings'); } });
   return res;
 };

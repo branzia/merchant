@@ -8,15 +8,17 @@ import RazorpayCheckout from 'react-native-razorpay';
 import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomTabBar from '@/components/BottomTabBar';
 
 type Cycle = 'monthly' | 'yearly';
 
 interface Plan {
   key: string;
   name: string;
-  products_limit: number;
+  products_limit: number | null;
   price_monthly: number;
   price_yearly: number;
+  features: string[];
 }
 
 interface CurrentSub {
@@ -28,12 +30,6 @@ interface CurrentSub {
   expires_at: string;
 }
 
-const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ['Up to 15 products', 'Basic analytics', 'COD & UPI payments', 'Order management'],
-  growth:  ['Up to 50 products', 'Advanced analytics', 'All payment methods', 'Priority support', 'Delivery zones'],
-  pro:     ['Up to 100 products', 'Full analytics suite', 'All payment methods', 'Priority support', 'Delivery zones', 'Custom attributes'],
-};
-
 const PLAN_COLORS: Record<string, { bg: string; border: string; badge: string; text: string }> = {
   starter: { bg: '#F9FAFB', border: '#E5E7EB', badge: '#6B7280', text: '#374151' },
   growth:  { bg: '#EEF2FF', border: '#C7D2FE', badge: '#4F46E5', text: '#3730A3' },
@@ -42,21 +38,38 @@ const PLAN_COLORS: Record<string, { bg: string; border: string; badge: string; t
 
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const { merchant, refreshMerchant } = useAuth();
+  const { merchant } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [current, setCurrent] = useState<CurrentSub | null>(null);
   const [currencySymbol, setCurrencySymbol] = useState('');
   const [cycle, setCycle] = useState<Cycle>('monthly');
-  const [subscribing, setSubscribing] = useState<string | null>(null); // plan key being processed
+  const [subscribing, setSubscribing] = useState<string | null>(null);
 
   useEffect(() => {
     api.getSubscription().then((res) => {
       if (res.status === 200) {
-        setPlans(res.data.plans ?? []);
-        setCurrent(res.data.current ?? null);
-        setCurrencySymbol(res.data.currency_symbol ?? merchant?.currency_symbol ?? '');
+        const d = res.data.data ?? res.data;
+        const rawPlans: Record<string, any> = d.plans ?? {};
+        const plansArr: Plan[] = Object.entries(rawPlans).map(([key, p]: [string, any]) => ({
+          key,
+          name: p.label ?? key,
+          products_limit: p.products ?? null,
+          price_monthly: p.monthly_price ?? 0,
+          price_yearly: p.yearly_price ?? 0,
+          features: p.features ?? [],
+        }));
+        setPlans(plansArr);
+        setCurrent({
+          plan: d.plan ?? '',
+          cycle: d.billing_cycle ?? 'monthly',
+          is_trial: d.is_trial ?? false,
+          plan_active: d.plan_active ?? false,
+          plan_days_remaining: d.days_remaining ?? 0,
+          expires_at: d.plan_expires_at ?? '',
+        });
+        setCurrencySymbol(d.currency_symbol ?? merchant?.currency_symbol ?? '');
       } else {
         Alert.alert('Error', 'Could not load plans. Please try again.');
       }
@@ -69,7 +82,6 @@ export default function SubscriptionScreen() {
     setSubscribing(plan.key);
 
     try {
-      // Step 1 — get Razorpay order from backend
       const initRes = await api.initiateSubscription(plan.key, cycle);
       if (initRes.status !== 200 && initRes.status !== 201) {
         Alert.alert('Error', initRes.data?.message ?? 'Failed to initiate payment.');
@@ -77,17 +89,43 @@ export default function SubscriptionScreen() {
         return;
       }
 
-      const rzpOrder = initRes.data;
+      const rzpData = initRes.data;
 
-      // Step 2 — open Razorpay checkout
+      // Downgrade scheduled — no payment needed
+      if (rzpData.type === 'scheduled') {
+        Alert.alert(
+          'Plan Change Scheduled',
+          rzpData.message ?? `${rzpData.plan_label} plan will activate on ${rzpData.effective_at}.`,
+          [{ text: 'OK', onPress: () => router.back() }],
+        );
+        setSubscribing(null);
+        return;
+      }
+
+      // Ensure the native Razorpay module is available
+      if (!RazorpayCheckout) {
+        Alert.alert('Error', 'Payment module unavailable. Please rebuild the app and try again.');
+        setSubscribing(null);
+        return;
+      }
+
+      // Validate required Razorpay fields before opening checkout
+      if (!rzpData.key_id || !rzpData.order_id || !rzpData.amount) {
+        Alert.alert('Error', 'Invalid payment details received from server. Please try again.');
+        setSubscribing(null);
+        return;
+      }
+
+      // Payment required — open Razorpay checkout
+      // Note: amount must be a string (paise) per Razorpay React Native SDK
       const paymentData = await RazorpayCheckout.open({
-        description: `${plan.name} Plan — ${cycle}`,
-        currency: rzpOrder.currency ?? 'INR',
-        key: rzpOrder.key,
-        amount: rzpOrder.amount,
-        name: rzpOrder.name ?? 'Branzia',
-        order_id: rzpOrder.order_id,
-        prefill: {
+        description: rzpData.description ?? `${plan.name} Plan – ${cycle}`,
+        currency: rzpData.currency ?? 'INR',
+        key: rzpData.key_id,
+        amount: String(rzpData.amount),
+        name: 'Branzia',
+        order_id: rzpData.order_id,
+        prefill: rzpData.prefill ?? {
           name: merchant?.name ?? '',
           email: merchant?.email ?? '',
           contact: merchant?.phone ?? '',
@@ -95,22 +133,17 @@ export default function SubscriptionScreen() {
         theme: { color: '#4F46E5' },
       });
 
-      // Step 3 — verify with backend
+      // Verify with backend
       const verifyRes = await api.verifySubscription({
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_signature: paymentData.razorpay_signature,
-        plan: plan.key,
-        cycle,
+        order_id: paymentData.razorpay_order_id,
+        payment_id: paymentData.razorpay_payment_id,
+        signature: paymentData.razorpay_signature,
       });
 
       if (verifyRes.status === 200) {
-        const updatedMerchant = verifyRes.data.merchant ?? verifyRes.data;
-        if (updatedMerchant?.shop_name) refreshMerchant(updatedMerchant);
-
         Alert.alert(
           'Subscribed!',
-          `You are now on the ${plan.name} plan. Enjoy!`,
+          verifyRes.data?.message ?? `You are now on the ${plan.name} plan. Enjoy!`,
           [{ text: 'Done', onPress: () => router.back() }],
         );
       } else {
@@ -118,17 +151,21 @@ export default function SubscriptionScreen() {
         router.back();
       }
     } catch (err: any) {
-      // User dismissed Razorpay or payment failed
-      if (err?.code !== 0) {
-        Alert.alert('Payment Failed', err?.description ?? 'Payment was not completed.');
-      }
+      // code === 0 means the user cancelled — don't show an error
+      if (err?.code === 0) return;
+      Alert.alert(
+        'Payment Failed',
+        err?.description ?? err?.message ?? 'Payment could not be completed. Please try again.',
+      );
     } finally {
       setSubscribing(null);
     }
   };
 
   const yearlySavings = (plan: Plan) =>
-    Math.round(((plan.price_monthly * 12 - plan.price_yearly) / (plan.price_monthly * 12)) * 100);
+    plan.price_monthly > 0
+      ? Math.round(((plan.price_monthly * 12 - plan.price_yearly) / (plan.price_monthly * 12)) * 100)
+      : 0;
 
   if (loading) {
     return (
@@ -139,7 +176,7 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       {/* Header */}
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
@@ -266,12 +303,18 @@ export default function SubscriptionScreen() {
                   <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Includes
                   </Text>
-                  {(PLAN_FEATURES[plan.key] ?? [`Up to ${plan.products_limit} products`]).map((feat) => (
-                    <View key={feat} className="flex-row items-center gap-2">
-                      <Text className="text-xs" style={{ color: colors.badge }}>✓</Text>
-                      <Text className="text-sm text-gray-700">{feat}</Text>
-                    </View>
-                  ))}
+                  {plan.features.length > 0 ? (
+                    plan.features.map((feat) => (
+                      <View key={feat} className="flex-row items-center gap-2">
+                        <Text className="text-xs" style={{ color: colors.badge }}>✓</Text>
+                        <Text className="text-sm text-gray-700">{feat}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text className="text-xs text-gray-400">
+                      {plan.products_limit != null ? `Up to ${plan.products_limit} products` : 'Unlimited products'}
+                    </Text>
+                  )}
                 </View>
 
                 {/* Subscribe button */}
@@ -308,6 +351,8 @@ export default function SubscriptionScreen() {
 
         </View>
       </ScrollView>
+
+      <BottomTabBar activeTab="settings" />
     </SafeAreaView>
   );
 }

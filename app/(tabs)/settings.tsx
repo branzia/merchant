@@ -1,6 +1,5 @@
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
-  Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -57,37 +56,29 @@ export default function SettingsScreen() {
   const { merchant, refreshMerchant, signOut } = useAuth();
   const { openDrawer } = useDrawer();
 
-  const [shopName, setShopName] = useState(merchant?.shop_name ?? '');
-  const [dialCode, setDialCode] = useState(merchant?.dial_code ?? '');
-  const [phone, setPhone] = useState(merchant?.phone ?? '');
-  const [description, setDescription] = useState(merchant?.description ?? '');
-  const [address, setAddress] = useState(merchant?.address ?? '');
-  const [pickupAddress, setPickupAddress] = useState(merchant?.pickup_address ?? '');
-  const [instagram, setInstagram] = useState(merchant?.instagram_handle ?? '');
-  const [facebook, setFacebook] = useState(merchant?.facebook_url ?? '');
-  const [youtube, setYoutube] = useState(merchant?.youtube_url ?? '');
-  const [loading, setLoading] = useState(true);
+  const [shopName, setShopName] = useState('');
+  const [dialCode, setDialCode] = useState('');
+  const [phone, setPhone] = useState('');
+  const [description, setDescription] = useState('');
+  const [address, setAddress] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [youtube, setYoutube] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
-    const res = await api.getSettings();
-    if (res.status === 200) {
-      const m = res.data.merchant ?? res.data;
-      setShopName(m.shop_name ?? '');
-      setDialCode(m.dial_code ?? '');
-      setPhone(m.phone ?? '');
-      setDescription(m.description ?? '');
-      setAddress(m.address ?? '');
-      setPickupAddress(m.pickup_address ?? '');
-      setInstagram(m.instagram_handle ?? '');
-      setFacebook(m.facebook_url ?? '');
-      setYoutube(m.youtube_url ?? '');
-      refreshMerchant(m);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!merchant) return;
+    setShopName(merchant.shop_name ?? '');
+    setDialCode(merchant.dial_code ?? '');
+    setPhone(merchant.phone ?? '');
+    setDescription(merchant.description ?? '');
+    setAddress(merchant.address ?? '');
+    setPickupAddress(merchant.pickup_address ?? '');
+    setInstagram(merchant.instagram_handle ?? '');
+    setFacebook(merchant.facebook_url ?? '');
+    setYoutube(merchant.youtube_url ?? '');
+  }, [merchant]);
 
   const handleSave = async () => {
     if (!shopName.trim()) {
@@ -108,24 +99,17 @@ export default function SettingsScreen() {
     if (youtube.trim()) payload.youtube_url = youtube.trim();
 
     const res = await api.updateSettings(payload);
-    setSaving(false);
 
     if (res.status === 200) {
-      const m = res.data.merchant ?? res.data;
-      refreshMerchant(m);
+      const meRes = await api.getMe();
+      if (meRes.status === 200) refreshMerchant(meRes.data.merchant);
+      setSaving(false);
       Alert.alert('Saved', 'Settings updated successfully.');
     } else {
+      setSaving(false);
       Alert.alert('Error', res.data?.message ?? 'Failed to save settings.');
     }
   };
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -237,7 +221,7 @@ export default function SettingsScreen() {
               <View className="px-4 pt-4 pb-3 flex-row items-start justify-between">
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 flex-wrap">
-                    <Text className="text-base font-bold text-indigo-900 capitalize">
+                    <Text className="text-base font-bold text-indigo-700 capitalize">
                       {merchant.subscription_plan} Plan
                     </Text>
                     <View
@@ -254,7 +238,7 @@ export default function SettingsScreen() {
                   </View>
 
                   {merchant.plan_days_remaining != null && (
-                    <Text className="text-xs text-indigo-500 mt-1">
+                    <Text className="text-xs text-indigo-400 mt-1">
                       {merchant.plan_days_remaining > 0
                         ? `${merchant.plan_days_remaining} days remaining`
                         : 'Plan expired — renew to keep your store live'}

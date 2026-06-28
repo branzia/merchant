@@ -56,7 +56,7 @@ Branzia is a multi-tenant online store builder for small businesses. This app gi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/branzia-merchant.git
+git clone https://github.com/branzia/merchant.git
 cd branzia-merchant
 
 # Install dependencies

@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomTabBar from '@/components/BottomTabBar';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   pending:   { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
@@ -64,7 +65,7 @@ export default function OrderDetailScreen() {
   const sc = STATUS_COLORS[order.status] ?? STATUS_COLORS.pending;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       {/* Header */}
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
@@ -82,7 +83,7 @@ export default function OrderDetailScreen() {
         {/* Chat button with unread badge */}
         <TouchableOpacity
           onPress={() => router.push(`/orders/${id}/chat` as any)}
-          className="relative w-10 h-10 items-center justify-center rounded-full bg-indigo-50"
+          className="relative w-10 h-10 items-center justify-center rounded-full bg-indigo-100"
         >
           <Text className="text-xl">💬</Text>
           {order.unread_messages > 0 && (
@@ -214,6 +215,8 @@ export default function OrderDetailScreen() {
 
         </View>
       </ScrollView>
+
+      <BottomTabBar activeTab="orders" />
 
       {/* Reject Modal */}
       <Modal visible={rejectModal} transparent animationType="slide">

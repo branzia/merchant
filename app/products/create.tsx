@@ -73,7 +73,7 @@ function ProductAttrCard({ attr, onChange, onRemove }: AttrCardProps) {
           <Switch
             value={attr.required}
             onValueChange={v => onChange({ ...attr, required: v })}
-            trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+            trackColor={{ false: '#D1D5DB', true: '#1D9E75' }}
             thumbColor="#FFFFFF"
             style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
           />
@@ -482,7 +482,7 @@ export default function CreateProductScreen() {
             <Switch
               value={isAvailable}
               onValueChange={setIsAvailable}
-              trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+              trackColor={{ false: '#D1D5DB', true: '#1D9E75' }}
               thumbColor="#FFFFFF"
             />
           </View>
