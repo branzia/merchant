@@ -16,7 +16,7 @@
       "backgroundColor": "#ffffff"
     },
     "android": {
-      "newArchEnabled": false,
+      "newArchEnabled": true,
       "package": "com.branzia.merchant",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
