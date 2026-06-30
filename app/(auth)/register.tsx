@@ -11,11 +11,8 @@ import {
 } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-
-const PLANS = ['Starter', 'Growth', 'Pro'] as const;
-type Plan = (typeof PLANS)[number];
-
-const WA_NUMBER = '917358720104';
+import { app } from '@/config';
+import type { Plan } from '@/config';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -72,8 +69,8 @@ export default function RegisterScreen() {
     if (message.trim()) lines.push(`Message: ${message.trim()}`);
 
     const text = encodeURIComponent(lines.join('\n'));
-    const waUrl = `https://wa.me/${WA_NUMBER}?text=${text}`;
-    const webUrl = `https://web.whatsapp.com/send?phone=${WA_NUMBER}&text=${text}`;
+    const waUrl = `https://wa.me/${app.whatsappNumber}?text=${text}`;
+    const webUrl = `https://web.whatsapp.com/send?phone=${app.whatsappNumber}&text=${text}`;
 
     const canOpen = await Linking.canOpenURL(waUrl);
     await Linking.openURL(canOpen ? waUrl : webUrl);
@@ -171,7 +168,7 @@ export default function RegisterScreen() {
             <View>
               <Text className="text-sm font-medium text-gray-700 mb-1.5">Plan *</Text>
               <View className="flex-row gap-2">
-                {PLANS.map(p => (
+                {app.plans.map(p => (
                   <TouchableOpacity
                     key={p}
                     onPress={() => setPlan(p)}
