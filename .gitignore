@@ -3,6 +3,9 @@
 # Claude Code local settings (personal permissions/config — do not share)
 .claude/
 
+# Project instructions (internal — do not share)
+CLAUDE.md
+
 # dependencies
 node_modules/
 

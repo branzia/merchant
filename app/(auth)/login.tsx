@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -59,8 +60,12 @@ export default function LoginScreen() {
 
           {/* Logo */}
           <View className="items-center mb-10">
-            <View className="w-20 h-20 bg-indigo-600 rounded-3xl items-center justify-center mb-5 shadow-lg">
-              <Text className="text-white text-4xl">🛍️</Text>
+            <View className="w-24 h-24 rounded-3xl overflow-hidden mb-4">
+              <Image
+                source={require('@/assets/icon.png')}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
             </View>
             <Text className="text-2xl font-bold text-gray-900">Branzia Merchant</Text>
             <Text className="text-sm text-gray-500 mt-1">Sign in to manage your store</Text>

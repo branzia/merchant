@@ -10,13 +10,17 @@
     "ios": {
       "supportsTablet": true
     },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "android": {
       "newArchEnabled": false,
       "package": "com.branzia.merchant",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -34,6 +38,6 @@
         "projectId": "b581a1f4-ba6a-4c3f-9850-22ddfa1ad3d9"
       }
     },
-    "owner": "visvanathan.tech@gmail.com"
+    "owner": "itsvishwa01"
   }
 }
