@@ -1,7 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
+import { api, app } from '@/config';
 
-const BASE_URL = 'https://branzia.app/api/merchant';
-const TOKEN_KEY = 'bearer_token';
+const BASE_URL = api.baseUrl;
+const TOKEN_KEY = app.storageKeys.token;
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ export async function clearToken(): Promise<void> {
   _cache.clear();
 }
 
-const MERCHANT_KEY = 'cached_merchant';
+const MERCHANT_KEY = app.storageKeys.merchant;
 
 export async function getCachedMerchant(): Promise<Record<string, any> | null> {
   try {

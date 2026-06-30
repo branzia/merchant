@@ -21,10 +21,10 @@ Branzia is a multi-tenant online store builder for small businesses. This app gi
 | **Products** | List, create, edit, delete, toggle availability, attributes & variants |
 | **Categories** | Create, edit, delete, reorder |
 | **Attributes** | Custom buyer-facing fields (select options, free text) |
-| **Settings** | Shop info, social links, business hours, logo upload |
+| **Settings** | Shop info, contact & social links, WhatsApp button, business hours, logo upload |
 | **Payment Methods** | Toggle COD, UPI, bank transfer; manage UPI ID & bank details |
 | **Delivery** | Flat rate, zone-based, or free delivery; zone management |
-| **Subscription** | View current plan, compare plans, upgrade via in-app Razorpay checkout |
+| **Subscription** | View current plan, compare plans, upgrade via in-app Razorpay checkout (optional — see Feature Flags) |
 | **Order Chat** | Per-order message thread with buyers, real-time polling, read receipts |
 
 ---
@@ -93,36 +93,46 @@ eas build --profile development --platform ios
 ```
 app/
 ├── (auth)/
-│   └── login.tsx           # Login screen
+│   └── login.tsx              # Login screen
 ├── (tabs)/
-│   ├── _layout.tsx         # Tab layout + slide drawer
-│   ├── index.tsx           # Dashboard
-│   ├── orders.tsx          # Orders list
-│   ├── products.tsx        # Products list
-│   ├── categories.tsx      # Categories
-│   ├── attributes.tsx      # Attributes
-│   └── settings.tsx        # Settings
+│   ├── _layout.tsx            # Tab layout + slide drawer
+│   ├── index.tsx              # Dashboard
+│   ├── orders.tsx             # Orders list
+│   ├── products.tsx           # Products list
+│   ├── categories.tsx         # Categories
+│   ├── attributes.tsx         # Attributes
+│   └── settings.tsx           # Settings menu
 ├── orders/
-│   ├── [id].tsx            # Order detail
+│   ├── [id].tsx               # Order detail
 │   └── [id]/
-│       └── chat.tsx        # Order chat
+│       └── chat.tsx           # Order chat
 ├── products/
-│   ├── create.tsx          # Create product
+│   ├── create.tsx             # Create product
 │   └── [id]/
-│       └── edit.tsx        # Edit product
+│       └── edit.tsx           # Edit product
 ├── settings/
-│   ├── hours.tsx           # Business hours
-│   ├── logo.tsx            # Logo upload
-│   ├── payment-methods.tsx # Payment methods
-│   └── delivery.tsx        # Delivery settings & zones
-└── subscription.tsx        # Plan selection & upgrade
+│   ├── shop-info.tsx          # Shop name, description, address
+│   ├── social.tsx             # Contact & social links
+│   ├── whatsapp.tsx           # WhatsApp button toggle & message
+│   ├── hours.tsx              # Business hours
+│   ├── logo.tsx               # Logo upload
+│   ├── payment-methods.tsx    # Payment methods
+│   └── delivery.tsx           # Delivery settings & zones
+└── subscription.tsx           # Plan selection & upgrade (billing only)
+
+config/
+├── app.ts                     # App name, feature flags, storage keys
+├── brand.js                   # Brand color palette (shared with Tailwind)
+├── colors.ts                  # Inline style color tokens
+├── api.ts                     # API base URL
+└── index.ts                   # Re-exports all config
 
 context/
-├── AuthContext.tsx          # Auth state + merchant profile
-└── DrawerContext.tsx        # Slide drawer open/close state
+├── AuthContext.tsx             # Auth state + merchant profile
+└── DrawerContext.tsx           # Slide drawer open/close state
 
 services/
-└── api.ts                  # API client with in-memory cache
+└── api.ts                     # API client with in-memory cache
 ```
 
 ---
@@ -177,9 +187,61 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## Environment
+## Configuration
 
-No `.env` file is needed — the API base URL is hardcoded to `https://branzia.app/api/merchant`. If you are running a self-hosted Branzia instance, update `BASE_URL` in `services/api.ts`.
+All configuration lives in the `config/` directory. No `.env` file is needed.
+
+### Brand & Theme (`config/brand.js` + `config/colors.ts`)
+
+`config/brand.js` defines the brand color palette. It is shared between Tailwind (NativeWind classes) and inline JS styles:
+
+```js
+// config/brand.js
+module.exports = {
+  name: 'Branzia',
+  primary: '#1D9E75',   // ← change this to rebrand the app
+  palette: { /* shades 50–950 */ },
+};
+```
+
+`config/colors.ts` exports typed color tokens for inline styles. `ui.accent` and `ui.toggleActive` automatically inherit `brand.primary`, so changing the brand color in `brand.js` updates the entire app.
+
+### App Settings (`config/app.ts`)
+
+```ts
+export const app = {
+  brandName: 'Branzia',           // Display name used in headers & prompts
+  appName: 'Branzia Merchant',
+  whatsappNumber: '917358720104', // WhatsApp number for shop opening requests (no +)
+  plans: ['Starter', 'Growth', 'Pro'],
+  razorpayThemeColor: '#4F46E5',  // Accent color passed to Razorpay checkout sheet
+  storageKeys: {
+    token: 'bearer_token',
+    merchant: 'cached_merchant',
+  },
+  features: {
+    billing: true,  // ← set to false to hide subscription/upgrade UI (see Feature Flags)
+  },
+};
+```
+
+### Feature Flags (`app.features`)
+
+Feature flags let you disable Branzia-specific infrastructure without deleting code. Useful for white-label forks or self-hosted deployments.
+
+| Flag | Default | Effect when `false` |
+|------|---------|---------------------|
+| `billing` | `true` | Hides the subscription plan card in Settings, the Upgrade link in the drawer, and redirects away from the subscription screen |
+
+### API Base URL (`config/api.ts` / `services/api.ts`)
+
+The API base URL is set in `services/api.ts`:
+
+```ts
+const BASE_URL = 'https://branzia.app/api/merchant';
+```
+
+If you are running a self-hosted Branzia instance, update this constant.
 
 ---
 

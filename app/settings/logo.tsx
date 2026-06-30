@@ -55,7 +55,7 @@ export default function LogoScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
-        <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
+        <TouchableOpacity onPress={() => router.push('/(tabs)/settings' as any)} className="p-1 -ml-1">
           <Text className="text-2xl">←</Text>
         </TouchableOpacity>
         <Text className="font-semibold text-base text-gray-900">Store Logo</Text>

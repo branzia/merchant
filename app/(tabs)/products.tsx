@@ -2,6 +2,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Image, RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
+import { ui } from '@/config';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
@@ -129,7 +130,7 @@ export default function ProductsScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={ui.accent} />
         </View>
       ) : (
         <ScrollView

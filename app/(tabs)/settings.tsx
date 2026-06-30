@@ -1,223 +1,69 @@
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import * as api from '@/services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useDrawer } from '@/context/DrawerContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { app } from '@/config';
 
-interface FieldProps {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder?: string;
-  keyboardType?: any;
-  multiline?: boolean;
-  autoCapitalize?: any;
-}
-
-function Field({ label, value, onChangeText, placeholder, keyboardType, multiline, autoCapitalize }: FieldProps) {
-  return (
-    <View>
-      <Text className="text-sm font-medium text-gray-700 mb-1.5">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        keyboardType={keyboardType ?? 'default'}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-        autoCapitalize={autoCapitalize ?? 'sentences'}
-        className="w-full px-4 py-3.5 border border-gray-300 rounded-2xl text-sm text-gray-900 bg-white"
-        style={multiline ? { textAlignVertical: 'top', minHeight: 80 } : {}}
-      />
-    </View>
-  );
-}
-
-function LinkRow({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+function LinkRow({ emoji, label, onPress, isLast }: {
+  emoji: string; label: string; onPress: () => void; isLast?: boolean;
+}) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center gap-3 px-4 py-4 border-b border-gray-50 active:bg-gray-50"
+      className={`flex-row items-center gap-3 px-4 py-4 active:bg-gray-50${!isLast ? ' border-b border-gray-100' : ''}`}
     >
       <Text className="text-xl">{emoji}</Text>
       <Text className="flex-1 text-sm font-medium text-gray-900">{label}</Text>
-      <Text className="text-gray-400">›</Text>
+      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
     </TouchableOpacity>
   );
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { merchant, refreshMerchant, signOut } = useAuth();
+  const { merchant, signOut } = useAuth();
   const { openDrawer } = useDrawer();
 
-  const [shopName, setShopName] = useState('');
-  const [dialCode, setDialCode] = useState('');
-  const [phone, setPhone] = useState('');
-  const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [instagram, setInstagram] = useState('');
-  const [facebook, setFacebook] = useState('');
-  const [youtube, setYoutube] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!merchant) return;
-    setShopName(merchant.shop_name ?? '');
-    setDialCode(merchant.dial_code ?? '');
-    setPhone(merchant.phone ?? '');
-    setDescription(merchant.description ?? '');
-    setAddress(merchant.address ?? '');
-    setPickupAddress(merchant.pickup_address ?? '');
-    setInstagram(merchant.instagram_handle ?? '');
-    setFacebook(merchant.facebook_url ?? '');
-    setYoutube(merchant.youtube_url ?? '');
-  }, [merchant]);
-
-  const handleSave = async () => {
-    if (!shopName.trim()) {
-      Alert.alert('Required', 'Shop name is required.');
-      return;
-    }
-    setSaving(true);
-    const payload: Record<string, unknown> = {
-      shop_name: shopName.trim(),
-    };
-    if (dialCode.trim()) payload.dial_code = dialCode.trim();
-    if (phone.trim()) payload.phone = phone.trim();
-    if (description.trim()) payload.description = description.trim();
-    if (address.trim()) payload.address = address.trim();
-    if (pickupAddress.trim()) payload.pickup_address = pickupAddress.trim();
-    if (instagram.trim()) payload.instagram_handle = instagram.trim();
-    if (facebook.trim()) payload.facebook_url = facebook.trim();
-    if (youtube.trim()) payload.youtube_url = youtube.trim();
-
-    const res = await api.updateSettings(payload);
-
-    if (res.status === 200) {
-      const meRes = await api.getMe();
-      if (meRes.status === 200) refreshMerchant(meRes.data.merchant);
-      setSaving(false);
-      Alert.alert('Saved', 'Settings updated successfully.');
-    } else {
-      setSaving(false);
-      Alert.alert('Error', res.data?.message ?? 'Failed to save settings.');
-    }
-  };
-
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 pt-4 pb-3 flex-row items-center gap-3">
         <TouchableOpacity onPress={openDrawer} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text className="text-2xl text-gray-400">☰</Text>
+          <Ionicons name="menu-outline" size={24} color="#6B7280" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-gray-900">Settings</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View className="px-4 py-4 gap-5">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="px-4 py-4 gap-4">
 
-          {/* Quick Links */}
-          <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <LinkRow emoji="💳" label="Payment Methods" onPress={() => router.push('/settings/payment-methods' as any)} />
-            <LinkRow emoji="🚚" label="Delivery Settings" onPress={() => router.push('/settings/delivery' as any)} />
-            <LinkRow emoji="🕐" label="Business Hours" onPress={() => router.push('/settings/hours' as any)} />
-            <LinkRow emoji="🖼️" label="Logo Upload" onPress={() => router.push('/settings/logo' as any)} />
-          </View>
-
-          {/* Shop Info */}
-          <View className="gap-4">
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Shop Info</Text>
-            <Field label="Shop Name *" value={shopName} onChangeText={setShopName} placeholder="Your shop name" />
-            <Field label="Description" value={description} onChangeText={setDescription} placeholder="Describe your shop..." multiline />
-            <Field label="Address" value={address} onChangeText={setAddress} placeholder="Full address" />
-          </View>
-
-          {/* Contact */}
-          <View className="gap-4">
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</Text>
-
-            {/* Phone with separate dial code */}
-            <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1.5">Phone Number</Text>
-              <View className="flex-row gap-2">
-                <View className="flex-row items-center border border-gray-300 rounded-2xl bg-white px-3" style={{ width: 80 }}>
-                  <Text className="text-gray-500 text-sm">+</Text>
-                  <TextInput
-                    value={dialCode}
-                    onChangeText={setDialCode}
-                    placeholder="91"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="number-pad"
-                    maxLength={5}
-                    className="flex-1 py-3.5 text-sm text-gray-900"
-                  />
-                </View>
-                <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="9876543210"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                  className="flex-1 px-4 py-3.5 border border-gray-300 rounded-2xl text-sm text-gray-900 bg-white"
-                />
-              </View>
-              <Text className="text-xs text-gray-400 mt-1">Dial code (e.g. 91) + number</Text>
+          {/* Store */}
+          <View>
+            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Store</Text>
+            <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <LinkRow emoji="🏪" label="Shop Info" onPress={() => router.push('/settings/shop-info' as any)} />
+              <LinkRow emoji="📱" label="Contact & Social" onPress={() => router.push('/settings/social' as any)} />
+              <LinkRow emoji="💬" label="WhatsApp" onPress={() => router.push('/settings/whatsapp' as any)} />
+              <LinkRow emoji="🖼️" label="Logo" onPress={() => router.push('/settings/logo' as any)} isLast />
             </View>
           </View>
 
-          {/* Social Links */}
-          <View className="gap-4">
-            <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Social Links</Text>
-            <Field
-              label="Instagram Handle"
-              value={instagram}
-              onChangeText={setInstagram}
-              placeholder="yourshop"
-              autoCapitalize="none"
-            />
-            <Field
-              label="Facebook URL / Username"
-              value={facebook}
-              onChangeText={setFacebook}
-              placeholder="yourshop"
-              autoCapitalize="none"
-            />
-            <Field
-              label="YouTube Channel / Handle"
-              value={youtube}
-              onChangeText={setYoutube}
-              placeholder="@yourshop"
-              autoCapitalize="none"
-            />
+          {/* Operations */}
+          <View>
+            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Operations</Text>
+            <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <LinkRow emoji="💳" label="Payment Methods" onPress={() => router.push('/settings/payment-methods' as any)} />
+              <LinkRow emoji="🚚" label="Delivery Settings" onPress={() => router.push('/settings/delivery' as any)} />
+              <LinkRow emoji="🕐" label="Business Hours" onPress={() => router.push('/settings/hours' as any)} isLast />
+            </View>
           </View>
 
-          {/* Save */}
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={saving}
-            className="bg-indigo-600 rounded-2xl py-4 items-center"
-            style={{ opacity: saving ? 0.7 : 1 }}
-          >
-            {saving ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white font-semibold text-base">Save Settings</Text>
-            )}
-          </TouchableOpacity>
-
           {/* Subscription Plan */}
-          {merchant?.subscription_plan && (
-            <View className="rounded-2xl overflow-hidden border border-indigo-100"
-              style={{ backgroundColor: '#EEF2FF' }}
-            >
-              {/* Plan header */}
+          {app.features.billing && merchant?.subscription_plan && (
+            <View className="rounded-2xl overflow-hidden border border-indigo-100" style={{ backgroundColor: '#EEF2FF' }}>
               <View className="px-4 pt-4 pb-3 flex-row items-start justify-between">
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 flex-wrap">
@@ -236,7 +82,6 @@ export default function SettingsScreen() {
                       </Text>
                     </View>
                   </View>
-
                   {merchant.plan_days_remaining != null && (
                     <Text className="text-xs text-indigo-400 mt-1">
                       {merchant.plan_days_remaining > 0
@@ -247,11 +92,10 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* Plan limits info */}
               <View className="mx-4 mb-3 bg-white/60 rounded-xl px-3 py-2.5 flex-row gap-4">
                 {[
                   { label: 'Currency', value: merchant.currency ?? '—' },
-                  { label: 'Store', value: merchant.slug ? `branzia.app/${merchant.slug}` : '—' },
+                  { label: 'Store', value: merchant.slug ? `branzia.app/store/${merchant.slug}` : '—' },
                 ].map(({ label, value }) => (
                   <View key={label} className="flex-1">
                     <Text className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wide">{label}</Text>
@@ -260,7 +104,6 @@ export default function SettingsScreen() {
                 ))}
               </View>
 
-              {/* Upgrade button */}
               <TouchableOpacity
                 onPress={() => router.push('/subscription' as any)}
                 activeOpacity={0.8}

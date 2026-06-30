@@ -186,6 +186,8 @@ Returned by login, `/auth/me`, and `/settings`.
     "7": { "open": null,    "close": null,     "closed": true  }
   },
   "theme": "cakes",
+  "whatsapp_enabled": true,
+  "whatsapp_message": "Hi, I'd like to place an order!",   // nullable
   "is_open": true,
   "subscription_plan": "growth",
   "plan_active": true,
@@ -719,7 +721,9 @@ Content-Type: application/json
   "estimated_time": 60,
   "min_order_amount": 200,
   "offers_delivery": true,
-  "offers_pickup": false
+  "offers_pickup": false,
+  "whatsapp_enabled": true,
+  "whatsapp_message": "Hi, I'd like to place an order!"
 }
 ```
 
@@ -1002,7 +1006,7 @@ Authorization: Bearer {token}
 
 ## FCM Push Notifications
 
-Register a device FCM token so the merchant receives push notifications for new orders.
+Register a device FCM token so the merchant receives push notifications for new orders and buyer messages.
 
 ### Register Token
 ```
@@ -1030,6 +1034,40 @@ Authorization: Bearer {token}
 ```
 
 Always call DELETE when the user logs out so they stop receiving notifications.
+
+---
+
+### Notification Payloads
+
+The server sends FCM v1 API notifications. The mobile app receives a `notification` object and a `data` map.
+
+#### New Order
+Fired when a buyer places an order.
+
+| Field | Value |
+|-------|-------|
+| `notification.title` | `New Order #101` |
+| `notification.body` | `Priya Sharma · ₹549` |
+| `data.url` | `/merchant/orders` |
+
+#### New Buyer Message
+Fired when a buyer sends a message on an order.
+
+| Field | Value |
+|-------|-------|
+| `notification.title` | `New message on Order #101` |
+| `notification.body` | `Priya Sharma: Can you make it eggless?` |
+| `data.url` | `/merchant/orders/101` |
+
+#### Handling `data.url` (deep linking)
+Use `data.url` to navigate to the correct screen when the notification is tapped:
+
+| `data.url` | Navigate to |
+|------------|-------------|
+| `/merchant/orders` | Orders List screen |
+| `/merchant/orders/{id}` | Order Detail screen for that order |
+
+> The currency symbol in the body (`₹`, `$`, `£`) matches the merchant's currency — do not hardcode it.
 
 ---
 
@@ -1119,11 +1157,6 @@ Marks all unread **buyer** messages in this order as read. Call when the merchan
 | `read_at` | Timestamp when the other party read it. `null` = not yet read |
 
 ---
-
-### Push Notifications for New Messages
-When a buyer sends a message, the merchant's FCM token receives a push notification. `data.url` points to `/merchant/orders/{id}` so tapping the notification opens the right order.
-
-> FCM is sent automatically by the server — no extra setup needed in the app.
 
 ### UI Notes
 - Show a chat icon/button on the Order Detail screen
@@ -1268,8 +1301,8 @@ Authorization: Bearer {token}
       },
       "pro": {
         "label": "Pro",
-        "monthly_price": 299,
-        "yearly_price": 2990,
+        "monthly_price": 499,
+        "yearly_price": 4990,
         "products": null,
         "staff": 5,
         "features": ["Everything in Growth", "Unlimited products", "Custom domain", "Google Tag Manager & custom pixels", "Up to 5 staff accounts", "Priority support"]

@@ -2,6 +2,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, Modal,
   TextInput, Alert, ActivityIndicator,
 } from 'react-native';
+import { ui } from '@/config';
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as api from '@/services/api';
@@ -49,7 +50,7 @@ export default function OrderDetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={ui.accent} />
       </View>
     );
   }

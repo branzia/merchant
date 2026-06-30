@@ -2,6 +2,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { ui } from '@/config';
 import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as api from '@/services/api';
@@ -155,7 +156,7 @@ export default function OrderChatScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={ui.accent} />
         </View>
       ) : (
         <KeyboardAvoidingView

@@ -8,6 +8,7 @@ import { DrawerProvider, useDrawer } from '@/context/DrawerContext';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as api from '@/services/api';
+import { api as appApi, ui, app } from '@/config';
 
 const DRAWER_WIDTH = Math.min(Dimensions.get('window').width * 0.82, 320);
 
@@ -83,7 +84,7 @@ function DrawerPanel() {
                   width: 52, height: 52, borderRadius: 26,
                   backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#4F46E5' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: ui.accent }}>
                     {(merchant?.shop_name ?? 'B')[0].toUpperCase()}
                   </Text>
                 </View>
@@ -116,7 +117,7 @@ function DrawerPanel() {
               </View>
               {merchant?.slug && (
                 <TouchableOpacity
-                  onPress={() => Linking.openURL(`https://branzia.app/store/${merchant.slug}`)}
+                  onPress={() => Linking.openURL(`${appApi.storeBaseUrl}/${merchant.slug}`)}
                   activeOpacity={0.7}
                   style={{
                     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -124,7 +125,7 @@ function DrawerPanel() {
                     backgroundColor: '#EEF2FF',
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#4F46E5' }}>Visit Store</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: ui.accent }}>Visit Store</Text>
                   <Text style={{ fontSize: 10, color: '#818CF8' }}>↗</Text>
                 </TouchableOpacity>
               )}
@@ -155,10 +156,10 @@ function DrawerPanel() {
                   }}
                 >
                   <Text style={{ fontSize: 19 }}>{item.emoji}</Text>
-                  <Text style={{ flex: 1, fontSize: 15, fontWeight: active ? '700' : '500', color: active ? '#4F46E5' : '#374151' }}>
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: active ? '700' : '500', color: active ? ui.accent : '#374151' }}>
                     {item.label}
                   </Text>
-                  {active && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4F46E5' }} />}
+                  {active && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: ui.accent }} />}
                 </TouchableOpacity>
               );
             })}
@@ -171,7 +172,7 @@ function DrawerPanel() {
             paddingHorizontal: 20, paddingBottom: insets.bottom + 20,
             paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6',
           }}>
-            {merchant?.subscription_plan && (
+            {app.features.billing && merchant?.subscription_plan && (
               <TouchableOpacity
                 onPress={() => { closeDrawer(); router.push('/subscription' as any); }}
                 activeOpacity={0.75}
@@ -182,7 +183,7 @@ function DrawerPanel() {
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: ui.accent, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {merchant.subscription_plan} plan
                   </Text>
                   {merchant.plan_days_remaining != null && (
@@ -193,7 +194,7 @@ function DrawerPanel() {
                     </Text>
                   )}
                 </View>
-                <Text style={{ fontSize: 13, color: '#4F46E5', fontWeight: '600' }}>Upgrade ↗</Text>
+                <Text style={{ fontSize: 13, color: ui.accent, fontWeight: '600' }}>Upgrade ↗</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -249,8 +250,8 @@ export default function TabsLayout() {
               shadowRadius: 8,
               shadowOffset: { width: 0, height: -2 },
             },
-            tabBarActiveTintColor: '#4F46E5',
-            tabBarInactiveTintColor: '#9CA3AF',
+            tabBarActiveTintColor: ui.accent,
+            tabBarInactiveTintColor: ui.placeholderText,
             tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 1 },
           }}
         >

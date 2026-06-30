@@ -9,13 +9,7 @@ import { useDrawer } from '@/context/DrawerContext';
 import * as api from '@/services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  pending:   { bg: '#FEF3C7', text: '#92400E' },
-  confirmed: { bg: '#DBEAFE', text: '#1E40AF' },
-  delivered: { bg: '#D1FAE5', text: '#065F46' },
-  rejected:  { bg: '#FEE2E2', text: '#991B1B' },
-};
+import { statusColors, statColors, ui } from '@/config';
 
 function SkeletonBox({ w, h, r = 8, style }: { w?: number | string; h: number; r?: number; style?: object }) {
   const anim = useRef(new Animated.Value(0.5)).current;
@@ -107,10 +101,10 @@ export default function DashboardScreen() {
   const sym = merchant?.currency_symbol ?? '';
 
   const STATS = [
-    { label: "Today's Orders",  value: data?.orders_today ?? 0,             color: '#111827', icon: 'receipt-outline' as const },
-    { label: "Today's Revenue", value: `${sym}${Number(data?.revenue_today ?? 0).toFixed(0)}`, color: '#4F46E5', icon: 'cash-outline' as const },
-    { label: 'Month Revenue',   value: `${sym}${Number(data?.revenue_month ?? 0).toFixed(0)}`, color: '#10B981', icon: 'trending-up-outline' as const },
-    { label: 'Total Products',  value: data?.total_products ?? 0,            color: '#111827', icon: 'bag-outline' as const },
+    { label: "Today's Orders",  value: data?.orders_today ?? 0,             color: statColors.ordersToday,   icon: 'receipt-outline' as const },
+    { label: "Today's Revenue", value: `${sym}${Number(data?.revenue_today ?? 0).toFixed(0)}`, color: statColors.revenueToday,  icon: 'cash-outline' as const },
+    { label: 'Month Revenue',   value: `${sym}${Number(data?.revenue_month ?? 0).toFixed(0)}`, color: statColors.revenueMonth,  icon: 'trending-up-outline' as const },
+    { label: 'Total Products',  value: data?.total_products ?? 0,            color: statColors.totalProducts, icon: 'bag-outline' as const },
   ];
 
   return (
@@ -144,7 +138,7 @@ export default function DashboardScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ui.accent} />}
       >
         {loading ? (
           <DashboardSkeleton />
@@ -173,9 +167,9 @@ export default function DashboardScreen() {
                     key={s}
                     onPress={() => router.push({ pathname: '/(tabs)/orders', params: { status: s } })}
                     className={`flex-1 items-center py-4 ${i < 3 ? 'border-r border-gray-100' : ''}`}
-                    style={{ backgroundColor: STATUS_COLORS[s].bg + '66' }}
+                    style={{ backgroundColor: statusColors[s].bg + '66' }}
                   >
-                    <Text className="text-xl font-bold" style={{ color: STATUS_COLORS[s].text }}>
+                    <Text className="text-xl font-bold" style={{ color: statusColors[s].text }}>
                       {statusCounts[s] ?? 0}
                     </Text>
                     <Text className="text-[10px] text-gray-500 mt-0.5 capitalize font-medium">{s}</Text>
@@ -210,8 +204,8 @@ export default function DashboardScreen() {
                     </View>
                     <View className="items-end gap-1">
                       <Text className="text-sm font-bold text-gray-900">{sym}{Number(order.total).toFixed(0)}</Text>
-                      <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[order.status]?.bg }}>
-                        <Text className="text-[10px] font-semibold capitalize" style={{ color: STATUS_COLORS[order.status]?.text }}>
+                      <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: statusColors[order.status]?.bg }}>
+                        <Text className="text-[10px] font-semibold capitalize" style={{ color: statusColors[order.status]?.text }}>
                           {order.status}
                         </Text>
                       </View>
@@ -227,7 +221,7 @@ export default function DashboardScreen() {
                 onPress={() => router.push('/subscription' as any)}
                 className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3.5 flex-row items-center gap-3 mb-4"
               >
-                <Ionicons name="sparkles-outline" size={18} color="#4F46E5" />
+                <Ionicons name="sparkles-outline" size={18} color={ui.accent} />
                 <View className="flex-1">
                   <Text className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
                     {merchant.subscription_plan} plan

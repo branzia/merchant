@@ -2,6 +2,7 @@ import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
   Switch, Alert, ActivityIndicator, Image, Modal,
 } from 'react-native';
+import { ui } from '@/config';
 import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -360,7 +361,7 @@ export default function EditProductScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={ui.accent} />
       </View>
     );
   }

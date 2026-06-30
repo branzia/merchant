@@ -2,6 +2,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Switch, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { ui } from '@/config';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
@@ -129,7 +130,7 @@ export default function PaymentMethodsScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={ui.accent} />
       </View>
     );
   }
@@ -137,7 +138,7 @@ export default function PaymentMethodsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'left', 'right']}>
       <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center gap-3">
-        <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
+        <TouchableOpacity onPress={() => router.push('/(tabs)/settings' as any)} className="p-1 -ml-1">
           <Text className="text-2xl">←</Text>
         </TouchableOpacity>
         <Text className="font-semibold text-base text-gray-900">Payment Methods</Text>
@@ -160,7 +161,7 @@ export default function PaymentMethodsScreen() {
               <Switch
                 value={codEnabled}
                 onValueChange={setCodEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+                trackColor={{ false: '#D1D5DB', true: ui.accent }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -188,7 +189,7 @@ export default function PaymentMethodsScreen() {
               <Switch
                 value={upiEnabled}
                 onValueChange={setUpiEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+                trackColor={{ false: '#D1D5DB', true: ui.accent }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -230,7 +231,7 @@ export default function PaymentMethodsScreen() {
               <Switch
                 value={bankEnabled}
                 onValueChange={setBankEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+                trackColor={{ false: '#D1D5DB', true: ui.accent }}
                 thumbColor="#FFFFFF"
               />
             </View>

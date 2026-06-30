@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { ui } from '@/config';
 
 export type TabName = 'home' | 'orders' | 'products' | 'settings';
 
@@ -45,9 +46,9 @@ export default function BottomTabBar({ activeTab }: { activeTab: TabName }) {
             <Ionicons
               name={(active ? tab.activeIcon : tab.icon) as any}
               size={22}
-              color={active ? '#4F46E5' : '#9CA3AF'}
+              color={active ? ui.accent : '#9CA3AF'}
             />
-            <Text style={{ fontSize: 11, fontWeight: '600', marginTop: 1, color: active ? '#4F46E5' : '#9CA3AF' }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', marginTop: 1, color: active ? ui.accent : '#9CA3AF' }}>
               {tab.label}
             </Text>
           </TouchableOpacity>

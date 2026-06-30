@@ -3,6 +3,7 @@ import {
   Modal, Alert, RefreshControl, ActivityIndicator, Switch,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { ui } from '@/config';
 import { useCallback, useEffect, useState } from 'react';
 import * as api from '@/services/api';
 import { useDrawer } from '@/context/DrawerContext';
@@ -147,7 +148,7 @@ export default function AttributesScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={ui.accent} />
         </View>
       ) : (
         <ScrollView
@@ -300,7 +301,7 @@ export default function AttributesScreen() {
                 <Switch
                   value={form.is_active}
                   onValueChange={v => setForm(f => ({ ...f, is_active: v }))}
-                  trackColor={{ false: '#D1D5DB', true: '#4F46E5' }}
+                  trackColor={{ false: '#D1D5DB', true: ui.accent }}
                   thumbColor="#FFFFFF"
                 />
               </View>

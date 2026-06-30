@@ -9,6 +9,7 @@ import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomTabBar from '@/components/BottomTabBar';
+import { planColors, ui, app } from '@/config';
 
 type Cycle = 'monthly' | 'yearly';
 
@@ -30,15 +31,15 @@ interface CurrentSub {
   expires_at: string;
 }
 
-const PLAN_COLORS: Record<string, { bg: string; border: string; badge: string; text: string }> = {
-  starter: { bg: '#F9FAFB', border: '#E5E7EB', badge: '#6B7280', text: '#374151' },
-  growth:  { bg: '#EEF2FF', border: '#C7D2FE', badge: '#4F46E5', text: '#3730A3' },
-  pro:     { bg: '#FDF4FF', border: '#E9D5FF', badge: '#7C3AED', text: '#5B21B6' },
-};
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { merchant } = useAuth();
+
+  // Billing is a Branzia-specific feature; redirect away if disabled in config
+  useEffect(() => {
+    if (!app.features.billing) router.replace('/(tabs)/settings' as any);
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -103,7 +104,7 @@ export default function SubscriptionScreen() {
       }
 
       // Ensure the native Razorpay module is available
-      if (!RazorpayCheckout) {
+      if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
         Alert.alert('Error', 'Payment module unavailable. Please rebuild the app and try again.');
         setSubscribing(null);
         return;
@@ -130,7 +131,7 @@ export default function SubscriptionScreen() {
           email: merchant?.email ?? '',
           contact: merchant?.phone ?? '',
         },
-        theme: { color: '#4F46E5' },
+        theme: { color: app.razorpayThemeColor },
       });
 
       // Verify with backend
@@ -153,10 +154,12 @@ export default function SubscriptionScreen() {
     } catch (err: any) {
       // code === 0 means the user cancelled — don't show an error
       if (err?.code === 0) return;
-      Alert.alert(
-        'Payment Failed',
-        err?.description ?? err?.message ?? 'Payment could not be completed. Please try again.',
-      );
+      // Razorpay errors have a numeric code; anything else is a native-module / JS error
+      if (typeof err?.code === 'number') {
+        Alert.alert('Payment Failed', err.description ?? 'Payment could not be completed. Please try again.');
+      } else {
+        Alert.alert('Error', 'Payment module unavailable. Please use a custom development build (not Expo Go) to test payments.');
+      }
     } finally {
       setSubscribing(null);
     }
@@ -170,7 +173,7 @@ export default function SubscriptionScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={ui.accent} />
       </View>
     );
   }
@@ -248,7 +251,7 @@ export default function SubscriptionScreen() {
           {/* Plan cards */}
           {plans.map((plan) => {
             const isCurrent = current?.plan === plan.key;
-            const colors = PLAN_COLORS[plan.key] ?? PLAN_COLORS.starter;
+            const colors = planColors[plan.key] ?? planColors.starter;
             const price = cycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
             const savings = yearlySavings(plan);
             const isProcessing = subscribing === plan.key;
