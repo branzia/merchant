@@ -260,11 +260,12 @@ export default function EditProductScreen() {
       api.getAttributes(),
     ]).then(([pRes, cRes, aRes]) => {
       if (pRes.status === 200) {
-        const p = pRes.data;
+        const p = pRes.data.product ?? pRes.data.data ?? pRes.data;
         setName(p.name);
         setPrice(String(p.price));
         setDescription(p.description ?? '');
-        setCategoryId(p.category_id ? String(p.category_id) : '');
+        const catId = p.category_id ?? p.category?.id ?? null;
+        setCategoryId(catId ? String(catId) : '');
         setIsAvailable(p.is_available);
         setExistingImage(p.image ?? '');
         // Load existing product attributes and assign stable _key values

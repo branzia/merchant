@@ -5,17 +5,19 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   Linking,
   Keyboard,
+  Image,
 } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import { useIsTablet } from '@/hooks/useIsTablet';
 import { app } from '@/config';
 import type { Plan } from '@/config';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const isTablet = useIsTablet();
   const [name, setName] = useState('');
   const [shopName, setShopName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,7 +32,7 @@ export default function RegisterScreen() {
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidShow', () => {
       if (messageFocused.current) {
-        scrollRef.current?.scrollToEnd({ animated: true });
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
       }
     });
     return () => sub.remove();
@@ -99,7 +101,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
       className="flex-1 bg-gray-50"
     >
       <ScrollView
@@ -107,11 +109,16 @@ export default function RegisterScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 px-6 py-12">
+        <View className="flex-1 px-6 py-12" style={isTablet ? { alignItems: 'center' } : undefined}>
+        <View style={isTablet ? { width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 24, padding: 40, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 20, shadowOffset: { width: 0, height: 4 }, elevation: 6 } : { width: '100%' }}>
           {/* Header */}
           <View className="items-center mb-8">
-            <View className="w-20 h-20 bg-green-500 rounded-3xl items-center justify-center mb-5 shadow-lg">
-              <Text className="text-4xl">🛍️</Text>
+            <View className="w-24 h-24 rounded-3xl overflow-hidden mb-4">
+              <Image
+                source={require('@/assets/icon.png')}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
             </View>
             <Text className="text-2xl font-bold text-gray-900">Open Your Shop</Text>
             <Text className="text-sm text-gray-500 mt-1 text-center px-4">
@@ -207,8 +214,7 @@ export default function RegisterScreen() {
                 placeholderTextColor="#9CA3AF"
                 onFocus={() => {
                   messageFocused.current = true;
-                  // also handles the case where keyboard is already open
-                  scrollRef.current?.scrollToEnd({ animated: true });
+                  setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
                 }}
                 onBlur={() => { messageFocused.current = false; }}
               />
@@ -216,7 +222,7 @@ export default function RegisterScreen() {
 
             <TouchableOpacity
               onPress={handleSend}
-              className="bg-green-500 rounded-2xl py-4 items-center mt-2 active:bg-green-600 flex-row justify-center gap-2"
+              className="bg-indigo-600 rounded-2xl py-4 items-center mt-2 active:bg-indigo-700 flex-row justify-center gap-2"
             >
               <Text className="text-xl">💬</Text>
               <Text className="text-white font-semibold text-base ml-1">
@@ -233,6 +239,7 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

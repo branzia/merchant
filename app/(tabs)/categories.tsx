@@ -7,9 +7,17 @@ import { useCallback, useEffect, useState } from 'react';
 import * as api from '@/services/api';
 import { useDrawer } from '@/context/DrawerContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useResponsive } from '@/hooks/useIsTablet';
 
 export default function CategoriesScreen() {
   const { openDrawer } = useDrawer();
+  const { isTablet, container, width: windowWidth } = useResponsive();
+  const colGap = 12;
+  const colPad = 16;
+  const numColumns = isTablet ? 2 : 1;
+  const itemWidth = numColumns > 1
+    ? (windowWidth - colPad * 2 - colGap * (numColumns - 1)) / numColumns
+    : undefined;
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +53,7 @@ export default function CategoriesScreen() {
     const res = await api.createCategory({ name: newName.trim(), is_active: true });
     setCreating(false);
     if (res.status === 201) {
-      setCategories((prev) => [...prev, res.data]);
+      setCategories((prev) => [...prev, res.data.data ?? res.data]);
       setNewName('');
       setCreateModal(false);
     } else {
@@ -65,7 +73,7 @@ export default function CategoriesScreen() {
     const res = await api.updateCategory(editTarget.id, { name: editName.trim(), is_active: editTarget.is_active });
     setSaving(false);
     if (res.status === 200) {
-      setCategories((prev) => prev.map((c) => c.id === editTarget.id ? res.data : c));
+      setCategories((prev) => prev.map((c) => c.id === editTarget.id ? (res.data.data ?? res.data) : c));
       setEditModal(false);
     } else {
       Alert.alert('Error', res.data?.message ?? 'Failed to update category.');
@@ -115,9 +123,10 @@ export default function CategoriesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          <View className="px-4 py-3 gap-3">
+          <View style={[{ padding: colPad, paddingTop: 12 }, container,
+            numColumns > 1 ? { flexDirection: 'row', flexWrap: 'wrap', gap: colGap } : { gap: 12 }]}>
             {categories.length === 0 ? (
-              <View className="items-center py-20">
+              <View className="items-center py-20" style={{ width: '100%' }}>
                 <Text className="text-5xl mb-3">🏷️</Text>
                 <Text className="text-gray-500 font-medium">No categories yet</Text>
                 <TouchableOpacity onPress={() => setCreateModal(true)} className="mt-3">
@@ -129,10 +138,11 @@ export default function CategoriesScreen() {
                 <View
                   key={cat.id}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 flex-row items-center gap-3"
+                  style={itemWidth ? { width: itemWidth } : undefined}
                 >
                   <View className="w-10 h-10 rounded-xl bg-indigo-50 items-center justify-center">
                     <Text className="text-indigo-600 font-bold text-base">
-                      {cat.name[0].toUpperCase()}
+                      {(cat.name ?? '?')[0].toUpperCase()}
                     </Text>
                   </View>
                   <View className="flex-1">
@@ -163,9 +173,23 @@ export default function CategoriesScreen() {
       )}
 
       {/* Create Modal */}
-      <Modal visible={createModal} transparent animationType="slide">
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
+      <Modal visible={createModal} transparent animationType={isTablet ? 'fade' : 'slide'}>
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: isTablet ? 'center' : 'flex-end',
+          alignItems: isTablet ? 'center' : undefined,
+        }}>
+          <View style={{
+            backgroundColor: '#fff',
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 40,
+            borderRadius: isTablet ? 24 : undefined,
+            borderTopLeftRadius: isTablet ? undefined : 24,
+            borderTopRightRadius: isTablet ? undefined : 24,
+            width: isTablet ? 480 : undefined,
+          }}>
             <Text className="text-xl font-bold text-gray-900 mb-4">New Category</Text>
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Category Name</Text>
             <TextInput
@@ -192,9 +216,23 @@ export default function CategoriesScreen() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal visible={editModal} transparent animationType="slide">
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
+      <Modal visible={editModal} transparent animationType={isTablet ? 'fade' : 'slide'}>
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: isTablet ? 'center' : 'flex-end',
+          alignItems: isTablet ? 'center' : undefined,
+        }}>
+          <View style={{
+            backgroundColor: '#fff',
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 40,
+            borderRadius: isTablet ? 24 : undefined,
+            borderTopLeftRadius: isTablet ? undefined : 24,
+            borderTopRightRadius: isTablet ? undefined : 24,
+            width: isTablet ? 480 : undefined,
+          }}>
             <Text className="text-xl font-bold text-gray-900 mb-4">Edit Category</Text>
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Category Name</Text>
             <TextInput

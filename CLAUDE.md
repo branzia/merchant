@@ -185,6 +185,7 @@ Returned by login, `/auth/me`, and `/settings`.
     "6": { "open": "09:00", "close": "21:00", "closed": false },
     "7": { "open": null,    "close": null,     "closed": true  }
   },
+  "timezone": "Asia/Kolkata",
   "theme": "cakes",
   "whatsapp_enabled": true,
   "whatsapp_message": "Hi, I'd like to place an order!",   // nullable
@@ -195,6 +196,36 @@ Returned by login, `/auth/me`, and `/settings`.
 }
 ```
 Business hours keys `"1"`–`"7"` = Monday–Sunday.
+
+`timezone` — IANA timezone string (e.g. `Asia/Kolkata`, `America/New_York`) used to compute `is_open` in the merchant's local time. Editable via `PATCH /settings/hours` below.
+
+**`is_open` and `business_hours` are informational only** — show them on the Business Hours screen and (optionally) as a badge elsewhere in the app. They do NOT block order placement; buyers can order at any time regardless of business hours.
+
+#### Timezone picker options
+
+On the Business Hours screen, show a picker with these timezones (one entry per zone a supported country actually spans — the web dashboard uses the same list):
+
+| Country | Value | Label |
+|---------|-------|-------|
+| India | `Asia/Kolkata` | India (IST) |
+| US | `America/New_York` | US Eastern (ET) |
+| US | `America/Chicago` | US Central (CT) |
+| US | `America/Denver` | US Mountain (MT) |
+| US | `America/Los_Angeles` | US Pacific (PT) |
+| UK | `Europe/London` | United Kingdom (GMT/BST) |
+| Canada | `America/Toronto` | Canada Eastern (ET) |
+| Canada | `America/Winnipeg` | Canada Central (CT) |
+| Canada | `America/Edmonton` | Canada Mountain (MT) |
+| Canada | `America/Vancouver` | Canada Pacific (PT) |
+| Australia | `Australia/Sydney` | Australia Eastern (AEST) |
+| Australia | `Australia/Brisbane` | Australia Eastern, no DST (AEST) |
+| Australia | `Australia/Adelaide` | Australia Central (ACST) |
+| Australia | `Australia/Perth` | Australia Western (AWST) |
+| UAE | `Asia/Dubai` | UAE (GST) |
+| Singapore | `Asia/Singapore` | Singapore (SGT) |
+| New Zealand | `Pacific/Auckland` | New Zealand (NZST/NZDT) |
+| Germany | `Europe/Berlin` | Germany (CET) |
+| France | `Europe/Paris` | France (CET) |
 
 ---
 
@@ -750,18 +781,22 @@ Content-Type: application/json
     "5": { "open": "09:00", "close": "21:00", "closed": false },
     "6": { "open": "09:00", "close": "21:00", "closed": false },
     "7": { "open": null,    "close": null,     "closed": true  }
-  }
+  },
+  "timezone": "Asia/Kolkata"
 }
 ```
-Keys `"1"`–`"7"` = Monday–Sunday. Must send the full 7-day object.
+Keys `"1"`–`"7"` = Monday–Sunday. Must send the full 7-day object. `timezone` is optional — omit to leave the merchant's current timezone unchanged.
 
 **Response 200:**
 ```json
 {
   "business_hours": { ...same shape... },
+  "timezone": "Asia/Kolkata",
   "is_open": true
 }
 ```
+
+This is informational only — saving hours does not block checkout for buyers at any time.
 
 ---
 

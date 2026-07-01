@@ -331,8 +331,10 @@ export const updateSettings = async (data: Record<string, unknown>) => {
   return res;
 };
 
-export const updateHours = async (hours: Record<string, unknown>) => {
-  const res = await request('PATCH', '/settings/hours', { hours });
+export const updateHours = async (hours: Record<string, unknown>, timezone?: string) => {
+  const body: Record<string, unknown> = { hours };
+  if (timezone) body.timezone = timezone;
+  const res = await request('PATCH', '/settings/hours', body);
   if (res.status === 200) invalidate('settings');
   return res;
 };

@@ -42,6 +42,10 @@ yarn-error.*
 # EAS credentials (contains keystore password — never commit)
 credentials.json
 
+# Google Play service account key — never commit (contains private key)
+google-service-account.json
+*-service-account*.json
+
 # typescript
 *.tsbuildinfo
 

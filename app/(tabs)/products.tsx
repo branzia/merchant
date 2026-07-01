@@ -1,10 +1,11 @@
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Image, RefreshControl, Alert, ActivityIndicator,
+  Image, RefreshControl, Alert, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { ui } from '@/config';
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useIsTablet } from '@/hooks/useIsTablet';
 import * as api from '@/services/api';
 import { useDrawer } from '@/context/DrawerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +16,14 @@ export default function ProductsScreen() {
   const { openDrawer } = useDrawer();
   const { merchant } = useAuth();
   const currencySymbol = merchant?.currency_symbol ?? '';
+  const isTablet = useIsTablet();
+  const { width: windowWidth } = useWindowDimensions();
+  const numColumns = !isTablet ? 1 : windowWidth > 1200 ? 5 : windowWidth > 900 ? 4 : windowWidth > 700 ? 3 : 2;
+  const colGap = 12;
+  const colPad = 16;
+  const itemWidth = numColumns > 1
+    ? (windowWidth - colPad * 2 - colGap * (numColumns - 1)) / numColumns
+    : undefined;
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +32,7 @@ export default function ProductsScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [meta, setMeta] = useState<any>(null);
   const [page, setPage] = useState(1);
+  const isMounted = useRef(false);
 
   const load = async (p = 1, reset = false) => {
     const params: Record<string, string> = { page: String(p) };
@@ -41,6 +51,18 @@ export default function ProductsScreen() {
   };
 
   useEffect(() => { setPage(1); setLoading(true); load(1, true); }, [categoryId]);
+
+  // Refresh list when returning from create/edit screens
+  useFocusEffect(
+    useCallback(() => {
+      if (isMounted.current) {
+        setPage(1);
+        load(1, true);
+      } else {
+        isMounted.current = true;
+      }
+    }, [search, categoryId])
+  );
 
   const onSearch = () => { setPage(1); setLoading(true); load(1, true); };
 
@@ -137,9 +159,9 @@ export default function ProductsScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          <View className="px-4 py-3 gap-3">
+          <View style={{ padding: colPad, paddingTop: 12, flexDirection: numColumns > 1 ? 'row' : 'column', flexWrap: numColumns > 1 ? 'wrap' : undefined, gap: colGap }}>
             {products.length === 0 ? (
-              <View className="items-center py-20">
+              <View className="items-center py-20" style={{ width: '100%' }}>
                 <Text className="text-5xl mb-3">📦</Text>
                 <Text className="text-gray-500 font-medium">No products yet</Text>
                 <TouchableOpacity onPress={() => router.push('/products/create')} className="mt-3">
@@ -148,7 +170,7 @@ export default function ProductsScreen() {
               </View>
             ) : (
               products.map((product) => (
-                <View key={product.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <View key={product.id} style={itemWidth ? { width: itemWidth } : undefined} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   <View className="flex-row gap-3 p-3">
                     {/* Image */}
                     <View className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
@@ -168,7 +190,7 @@ export default function ProductsScreen() {
                           {product.name}
                         </Text>
                         <Text className="text-sm font-bold text-indigo-600 shrink-0">
-                          {currencySymbol}{Number(product.price).toFixed(0)}
+                          {currencySymbol}{Number(product.price).toFixed(2)}
                         </Text>
                       </View>
                       {product.category && (

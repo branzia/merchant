@@ -6,6 +6,7 @@ import { ui } from '@/config';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomTabBar from '@/components/BottomTabBar';
 
@@ -56,6 +57,8 @@ function Field({
 
 export default function DeliveryScreen() {
   const router = useRouter();
+  const { merchant } = useAuth();
+  const canUseZones = ['growth', 'pro'].includes(merchant?.subscription_plan ?? '');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -113,13 +116,13 @@ export default function DeliveryScreen() {
       offers_delivery: offersDelivery,
       offers_pickup: offersPickup,
       delivery_type: deliveryType,
-      free_delivery_enabled: freeDeliveryEnabled,
+      free_delivery_enabled: deliveryType === 'free' ? freeDeliveryEnabled : false,
     };
     if (pickupAddress.trim()) payload.pickup_address = pickupAddress.trim();
     if (estimatedTime) payload.estimated_time = Number(estimatedTime);
     if (minOrder) payload.min_order_amount = Number(minOrder);
     if (deliveryType === 'flat' && flatCharge) payload.flat_delivery_charge = Number(flatCharge);
-    if (freeDeliveryEnabled && freeDeliveryAbove) payload.free_delivery_above = Number(freeDeliveryAbove);
+    if (deliveryType === 'free' && freeDeliveryEnabled && freeDeliveryAbove) payload.free_delivery_above = Number(freeDeliveryAbove);
 
     const res = await api.updateDelivery(payload);
     setSaving(false);
@@ -274,10 +277,12 @@ export default function DeliveryScreen() {
             />
           </View>
 
-          {/* Delivery Type */}
+          {/* Delivery Pricing */}
           {offersDelivery && (
             <View className="gap-3">
               <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Delivery Pricing</Text>
+
+              {/* Type tabs */}
               <View className="flex-row gap-2">
                 {([
                   { key: 'flat', label: '📦 Flat Rate' },
@@ -296,6 +301,7 @@ export default function DeliveryScreen() {
                 ))}
               </View>
 
+              {/* Flat Rate: charge field */}
               {deliveryType === 'flat' && (
                 <Field
                   label="Flat Delivery Charge"
@@ -306,13 +312,91 @@ export default function DeliveryScreen() {
                 />
               )}
 
-              {/* Free delivery threshold */}
-              {(deliveryType === 'flat' || deliveryType === 'zone') && (
+              {/* By Zone: upgrade gate or zones list */}
+              {deliveryType === 'zone' && (
+                canUseZones ? (
+                  <View className="gap-3">
+                    <View className="flex-row items-center justify-between">
+                      <View>
+                        <Text className="text-sm font-semibold text-gray-900">Delivery Zones</Text>
+                        <Text className="text-xs text-gray-500 mt-0.5">Set per-zone delivery charges</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={openCreateZone}
+                        className="w-9 h-9 bg-indigo-600 rounded-full items-center justify-center"
+                      >
+                        <Text className="text-white text-2xl font-light" style={{ lineHeight: 26 }}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {zones.length === 0 ? (
+                      <TouchableOpacity
+                        onPress={openCreateZone}
+                        className="border-2 border-dashed border-gray-200 rounded-2xl py-8 items-center"
+                      >
+                        <Text className="text-3xl mb-2">📍</Text>
+                        <Text className="text-gray-500 text-sm font-medium">No zones yet</Text>
+                        <Text className="text-gray-400 text-xs mt-1">Tap to add your first zone</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      zones.map((zone) => (
+                        <View
+                          key={zone.id}
+                          className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3.5 flex-row items-center gap-3"
+                        >
+                          <View className="flex-1">
+                            <View className="flex-row items-center gap-2">
+                              <Text className="font-semibold text-sm text-gray-900">{zone.zone_name}</Text>
+                              {!zone.is_active && (
+                                <View className="bg-gray-100 px-2 py-0.5 rounded-full">
+                                  <Text className="text-[10px] text-gray-400 font-semibold">inactive</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text className="text-xs text-indigo-600 mt-0.5 font-medium">
+                              Charge: {zone.delivery_charge}
+                            </Text>
+                          </View>
+                          <View className="flex-row gap-2">
+                            <TouchableOpacity
+                              onPress={() => openEditZone(zone)}
+                              className="p-2 rounded-xl bg-indigo-50"
+                            >
+                              <Text>✏️</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => handleDeleteZone(zone)}
+                              className="p-2 rounded-xl bg-red-50"
+                            >
+                              <Text>🗑️</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => router.push('/subscription' as any)}
+                    className="border-2 border-dashed border-indigo-200 bg-indigo-50 rounded-2xl py-8 items-center gap-2"
+                  >
+                    <Text className="text-3xl">📍</Text>
+                    <Text className="text-indigo-700 font-semibold text-sm">Upgrade to Growth to unlock</Text>
+                    <Text className="text-indigo-500 text-xs text-center px-6">Set different delivery charges per area</Text>
+                    <View className="mt-1 bg-indigo-600 px-4 py-1.5 rounded-full">
+                      <Text className="text-white text-xs font-semibold">Upgrade Now</Text>
+                    </View>
+                  </TouchableOpacity>
+                )
+              )}
+
+              {/* Free: threshold */}
+              {deliveryType === 'free' && (
                 <View className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4">
                   <View className="flex-row items-center justify-between py-3.5">
-                    <View>
-                      <Text className="text-sm font-medium text-gray-900">Free Delivery Above Amount</Text>
-                      <Text className="text-xs text-gray-500 mt-0.5">Waive charge if order total exceeds threshold</Text>
+                    <View className="flex-1 mr-3">
+                      <Text className="text-sm font-medium text-gray-900">Minimum Purchase for Free Delivery</Text>
+                      <Text className="text-xs text-gray-500 mt-0.5">Set a minimum order amount, or leave off for always free</Text>
                     </View>
                     <Switch
                       value={freeDeliveryEnabled}
@@ -334,6 +418,7 @@ export default function DeliveryScreen() {
                   )}
                 </View>
               )}
+
             </View>
           )}
 
@@ -341,7 +426,7 @@ export default function DeliveryScreen() {
           <TouchableOpacity
             onPress={handleSave}
             disabled={saving}
-            className="bg-indigo-600 rounded-2xl py-4 items-center"
+            className="bg-indigo-600 rounded-2xl py-4 items-center mb-6"
             style={{ opacity: saving ? 0.7 : 1 }}
           >
             {saving ? (
@@ -350,72 +435,6 @@ export default function DeliveryScreen() {
               <Text className="text-white font-semibold text-base">Save Delivery Settings</Text>
             )}
           </TouchableOpacity>
-
-          {/* Delivery Zones (only when delivery_type === 'zone') */}
-          {offersDelivery && deliveryType === 'zone' && (
-            <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-sm font-semibold text-gray-900">Delivery Zones</Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">Set per-zone delivery charges</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={openCreateZone}
-                  className="w-9 h-9 bg-indigo-600 rounded-full items-center justify-center"
-                >
-                  <Text className="text-white text-2xl font-light" style={{ lineHeight: 26 }}>+</Text>
-                </TouchableOpacity>
-              </View>
-
-              {zones.length === 0 ? (
-                <TouchableOpacity
-                  onPress={openCreateZone}
-                  className="border-2 border-dashed border-gray-200 rounded-2xl py-8 items-center"
-                >
-                  <Text className="text-3xl mb-2">📍</Text>
-                  <Text className="text-gray-500 text-sm font-medium">No zones yet</Text>
-                  <Text className="text-gray-400 text-xs mt-1">Tap to add your first zone</Text>
-                </TouchableOpacity>
-              ) : (
-                zones.map((zone) => (
-                  <View
-                    key={zone.id}
-                    className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3.5 flex-row items-center gap-3"
-                  >
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="font-semibold text-sm text-gray-900">{zone.zone_name}</Text>
-                        {!zone.is_active && (
-                          <View className="bg-gray-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-[10px] text-gray-400 font-semibold">inactive</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="text-xs text-indigo-600 mt-0.5 font-medium">
-                        Charge: {zone.delivery_charge}
-                      </Text>
-                    </View>
-                    <View className="flex-row gap-2">
-                      <TouchableOpacity
-                        onPress={() => openEditZone(zone)}
-                        className="p-2 rounded-xl bg-indigo-50"
-                      >
-                        <Text>✏️</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteZone(zone)}
-                        className="p-2 rounded-xl bg-red-50"
-                      >
-                        <Text>🗑️</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          )}
-
-          <View className="h-4" />
         </View>
       </ScrollView>
 

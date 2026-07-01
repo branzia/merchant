@@ -9,6 +9,7 @@ import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { useDrawer } from '@/context/DrawerContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useResponsive } from '@/hooks/useIsTablet';
 
 const STATUSES = ['', 'pending', 'confirmed', 'delivered', 'rejected'] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -27,6 +28,13 @@ export default function OrdersScreen() {
   const { openDrawer } = useDrawer();
   const { merchant } = useAuth();
   const currencySymbol = merchant?.currency_symbol ?? '';
+  const { isTablet, container, width: windowWidth } = useResponsive();
+  const colGap = 12;
+  const colPad = 16;
+  const numColumns = isTablet ? 2 : 1;
+  const itemWidth = numColumns > 1
+    ? (windowWidth - colPad * 2 - colGap * (numColumns - 1)) / numColumns
+    : undefined;
   const params = useLocalSearchParams<{ status?: string }>();
   const [orders, setOrders] = useState<any[]>([]);
   const [meta, setMeta] = useState<any>(null);
@@ -124,9 +132,10 @@ export default function OrdersScreen() {
             }
           }}
         >
-          <View className="px-4 py-3 gap-3">
+          <View style={[{ padding: colPad, paddingTop: 12 }, container,
+            numColumns > 1 ? { flexDirection: 'row', flexWrap: 'wrap', gap: colGap } : { gap: 12 }]}>
             {orders.length === 0 ? (
-              <View className="items-center py-20">
+              <View className="items-center py-20" style={{ width: '100%' }}>
                 <Text className="text-5xl mb-3">📋</Text>
                 <Text className="text-gray-500 font-medium">No orders found</Text>
                 <Text className="text-gray-400 text-sm mt-1">Try adjusting your filters</Text>
@@ -137,6 +146,7 @@ export default function OrdersScreen() {
                   key={order.id}
                   onPress={() => router.push(`/orders/${order.id}`)}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 active:bg-gray-50"
+                  style={itemWidth ? { width: itemWidth } : undefined}
                 >
                   <View className="flex-row items-start justify-between gap-2">
                     <View className="flex-1">

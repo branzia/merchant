@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useIsTablet } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import * as api from '@/services/api';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const router = useRouter();
+  const isTablet = useIsTablet();
   const [loginVal, setLoginVal] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -49,14 +51,15 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
       className="flex-1 bg-gray-50"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 justify-center px-6 py-12">
+        <View className="flex-1 justify-center px-6 py-12" style={isTablet ? { alignItems: 'center' } : undefined}>
+        <View style={isTablet ? { width: '100%', maxWidth: 460, backgroundColor: '#fff', borderRadius: 24, padding: 40, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 20, shadowOffset: { width: 0, height: 4 }, elevation: 6 } : { flex: 1, justifyContent: 'center' }}>
 
           {/* Logo */}
           <View className="items-center mb-10">
@@ -140,6 +143,7 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

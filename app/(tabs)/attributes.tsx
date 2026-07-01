@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import * as api from '@/services/api';
 import { useDrawer } from '@/context/DrawerContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useResponsive } from '@/hooks/useIsTablet';
 
 type AttrType = 'select' | 'text';
 
@@ -25,6 +26,13 @@ const BLANK_FORM = { name: '', type: 'select' as AttrType, values: [] as string[
 
 export default function AttributesScreen() {
   const { openDrawer } = useDrawer();
+  const { isTablet, container, width: windowWidth } = useResponsive();
+  const colGap = 12;
+  const colPad = 16;
+  const numColumns = isTablet ? 2 : 1;
+  const itemWidth = numColumns > 1
+    ? (windowWidth - colPad * 2 - colGap * (numColumns - 1)) / numColumns
+    : undefined;
   const [attrs, setAttrs] = useState<Attribute[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -155,9 +163,10 @@ export default function AttributesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          <View className="px-4 py-3 gap-3">
+          <View style={[{ padding: colPad, paddingTop: 12 }, container,
+            numColumns > 1 ? { flexDirection: 'row', flexWrap: 'wrap', gap: colGap } : { gap: 12 }]}>
             {attrs.length === 0 ? (
-              <View className="items-center py-20">
+              <View className="items-center py-20" style={{ width: '100%' }}>
                 <Text className="text-5xl mb-3">🎛️</Text>
                 <Text className="text-gray-500 font-medium">No attributes yet</Text>
                 <Text className="text-gray-400 text-xs mt-1 text-center px-8">
@@ -169,7 +178,8 @@ export default function AttributesScreen() {
               </View>
             ) : (
               attrs.map((attr) => (
-                <View key={attr.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4">
+                <View key={attr.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4"
+                  style={itemWidth ? { width: itemWidth } : undefined}>
                   <View className="flex-row items-start gap-3">
                     <View className="flex-1 gap-1.5">
                       <View className="flex-row items-center gap-2 flex-wrap">
@@ -215,13 +225,24 @@ export default function AttributesScreen() {
       )}
 
       {/* Create / Edit Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
+      <Modal visible={modalVisible} transparent animationType={isTablet ? 'fade' : 'slide'}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 justify-end"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: isTablet ? 'center' : 'flex-end',
+            alignItems: isTablet ? 'center' : undefined,
+          }}
         >
-          <View className="bg-white rounded-t-3xl" style={{ maxHeight: '88%' }}>
+          <View style={{
+            backgroundColor: '#fff',
+            maxHeight: '88%',
+            borderRadius: isTablet ? 24 : undefined,
+            borderTopLeftRadius: isTablet ? undefined : 24,
+            borderTopRightRadius: isTablet ? undefined : 24,
+            width: isTablet ? 520 : undefined,
+          }}>
             <ScrollView
               className="px-6 pt-6"
               keyboardShouldPersistTaps="handled"

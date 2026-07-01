@@ -38,7 +38,6 @@ export default function ShopInfoScreen() {
   const [shopName, setShopName] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function ShopInfoScreen() {
     setShopName(merchant.shop_name ?? '');
     setDescription(merchant.description ?? '');
     setAddress(merchant.address ?? '');
-    setPickupAddress(merchant.pickup_address ?? '');
   }, [merchant]);
 
   const handleSave = async () => {
@@ -58,7 +56,6 @@ export default function ShopInfoScreen() {
     const payload: Record<string, unknown> = { shop_name: shopName.trim() };
     if (description.trim()) payload.description = description.trim();
     if (address.trim()) payload.address = address.trim();
-    if (pickupAddress.trim()) payload.pickup_address = pickupAddress.trim();
 
     const res = await api.updateSettings(payload);
     if (res.status === 200) {
@@ -84,8 +81,7 @@ export default function ShopInfoScreen() {
         <View className="px-4 py-4 gap-4">
           <Field label="Shop Name" value={shopName} onChangeText={setShopName} placeholder="Your shop name" required />
           <Field label="Description" value={description} onChangeText={setDescription} placeholder="Describe your shop..." multiline />
-          <Field label="Address" value={address} onChangeText={setAddress} placeholder="Full address" />
-          <Field label="Pickup Address" value={pickupAddress} onChangeText={setPickupAddress} placeholder="Shop No 5, MG Road" multiline />
+          <Field label="Store Address" value={address} onChangeText={setAddress} placeholder="Full address" />
 
           <TouchableOpacity
             onPress={handleSave}

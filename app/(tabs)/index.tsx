@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useResponsive } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import { useDrawer } from '@/context/DrawerContext';
 import * as api from '@/services/api';
@@ -78,6 +79,7 @@ export default function DashboardScreen() {
   const { merchant } = useAuth();
   const { openDrawer } = useDrawer();
   const router = useRouter();
+  const { isTablet, container, fs } = useResponsive();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,40 +103,42 @@ export default function DashboardScreen() {
   const sym = merchant?.currency_symbol ?? '';
 
   const STATS = [
-    { label: "Today's Orders",  value: data?.orders_today ?? 0,             color: statColors.ordersToday,   icon: 'receipt-outline' as const },
-    { label: "Today's Revenue", value: `${sym}${Number(data?.revenue_today ?? 0).toFixed(0)}`, color: statColors.revenueToday,  icon: 'cash-outline' as const },
-    { label: 'Month Revenue',   value: `${sym}${Number(data?.revenue_month ?? 0).toFixed(0)}`, color: statColors.revenueMonth,  icon: 'trending-up-outline' as const },
-    { label: 'Total Products',  value: data?.total_products ?? 0,            color: statColors.totalProducts, icon: 'bag-outline' as const },
+    { label: 'Orders',   sub: 'Today',   value: data?.orders_today ?? 0,                                 color: statColors.ordersToday,   icon: 'receipt-outline'      as const },
+    { label: 'Revenue',  sub: 'Today',   value: `${sym}${Number(data?.revenue_today ?? 0).toFixed(0)}`,  color: statColors.revenueToday,  icon: 'cash-outline'         as const },
+    { label: 'Revenue',  sub: 'Month',   value: `${sym}${Number(data?.revenue_month ?? 0).toFixed(0)}`,  color: statColors.revenueMonth,  icon: 'trending-up-outline'  as const },
+    { label: 'Products', sub: 'Total',   value: data?.total_products ?? 0,                               color: statColors.totalProducts, icon: 'bag-outline'          as const },
   ];
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-white border-b border-gray-100 px-4 pt-4 pb-3">
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={openDrawer} activeOpacity={0.7}>
-            {merchant?.logo ? (
-              <Image source={{ uri: merchant.logo }} className="w-11 h-11 rounded-full" />
-            ) : (
-              <View className="w-11 h-11 rounded-full bg-indigo-100 items-center justify-center">
-                <Text className="text-indigo-600 font-bold text-lg">
-                  {(merchant?.shop_name ?? 'B')[0].toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-xs text-gray-400">Welcome back,</Text>
-            <Text className="font-bold text-gray-900 text-base" numberOfLines={1}>{merchant?.shop_name}</Text>
-          </View>
-          <View className={`flex-row items-center gap-1.5 px-2.5 py-1 rounded-full ${merchant?.is_open ? 'bg-green-100' : 'bg-red-100'}`}>
-            <View className={`w-1.5 h-1.5 rounded-full ${merchant?.is_open ? 'bg-green-500' : 'bg-red-400'}`} />
-            <Text className={`text-xs font-semibold ${merchant?.is_open ? 'text-green-700' : 'text-red-600'}`}>
-              {merchant?.is_open ? 'Open' : 'Closed'}
-            </Text>
+      {/* Header — show store info only on phone; sidebar covers it on tablet */}
+      {!isTablet && (
+        <View className="bg-white border-b border-gray-100 px-4 pt-4 pb-3">
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={openDrawer} activeOpacity={0.7}>
+              {merchant?.logo ? (
+                <Image source={{ uri: merchant.logo }} className="w-11 h-11 rounded-full" />
+              ) : (
+                <View className="w-11 h-11 rounded-full bg-indigo-100 items-center justify-center">
+                  <Text className="text-indigo-600 font-bold text-lg">
+                    {(merchant?.shop_name ?? 'B')[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View className="flex-1">
+              <Text className="text-xs text-gray-400">Welcome back,</Text>
+              <Text className="font-bold text-gray-900 text-base" numberOfLines={1}>{merchant?.shop_name}</Text>
+            </View>
+            <View className={`flex-row items-center gap-1.5 px-2.5 py-1 rounded-full ${merchant?.is_open ? 'bg-green-100' : 'bg-red-100'}`}>
+              <View className={`w-1.5 h-1.5 rounded-full ${merchant?.is_open ? 'bg-green-500' : 'bg-red-400'}`} />
+              <Text className={`text-xs font-semibold ${merchant?.is_open ? 'text-green-700' : 'text-red-600'}`}>
+                {merchant?.is_open ? 'Open' : 'Closed'}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -143,17 +147,18 @@ export default function DashboardScreen() {
         {loading ? (
           <DashboardSkeleton />
         ) : (
-          <View className="px-4 pt-4 gap-4">
+          <View className="px-4 pt-4 gap-4" style={container}>
 
-            {/* Stat Cards — 2×2 */}
-            <View className="flex-row flex-wrap gap-3">
+            {/* Stat Cards — flex-basis 130px: 2 cols on phone, 4 on wide tablet, adapts automatically */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {STATS.map((stat) => (
-                <View key={stat.label} className="flex-1 min-w-[44%] bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <View className="flex-row items-center gap-1.5 mb-2">
-                    <Ionicons name={stat.icon} size={14} color="#9CA3AF" />
-                    <Text className="text-xs text-gray-400 font-medium">{stat.label}</Text>
+                <View key={stat.label + stat.sub} style={{ flexGrow: 1, flexBasis: 130, backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ fontSize: fs(11), color: '#9CA3AF', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>{stat.sub}</Text>
+                    <Ionicons name={stat.icon} size={fs(14)} color={stat.color} style={{ opacity: 0.6 }} />
                   </View>
-                  <Text className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</Text>
+                  <Text style={{ fontSize: fs(22), fontWeight: '800', color: stat.color, marginBottom: 4 }}>{stat.value}</Text>
+                  <Text style={{ fontSize: fs(12), color: '#6B7280', fontWeight: '500' }}>{stat.label}</Text>
                 </View>
               ))}
             </View>

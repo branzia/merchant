@@ -1,11 +1,12 @@
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Switch, Alert, ActivityIndicator,
+  Switch, Alert, ActivityIndicator, Modal, FlatList, Dimensions,
 } from 'react-native';
 import { ui } from '@/config';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomTabBar from '@/components/BottomTabBar';
 
@@ -14,30 +15,59 @@ const DAY_NAMES: Record<string, string> = {
   '5': 'Friday', '6': 'Saturday', '7': 'Sunday',
 };
 
+const TIMEZONES = [
+  { value: 'Asia/Kolkata',          label: 'India (IST)' },
+  { value: 'America/New_York',      label: 'US Eastern (ET)' },
+  { value: 'America/Chicago',       label: 'US Central (CT)' },
+  { value: 'America/Denver',        label: 'US Mountain (MT)' },
+  { value: 'America/Los_Angeles',   label: 'US Pacific (PT)' },
+  { value: 'Europe/London',         label: 'United Kingdom (GMT/BST)' },
+  { value: 'America/Toronto',       label: 'Canada Eastern (ET)' },
+  { value: 'America/Winnipeg',      label: 'Canada Central (CT)' },
+  { value: 'America/Edmonton',      label: 'Canada Mountain (MT)' },
+  { value: 'America/Vancouver',     label: 'Canada Pacific (PT)' },
+  { value: 'Australia/Sydney',      label: 'Australia Eastern (AEST)' },
+  { value: 'Australia/Brisbane',    label: 'Australia Eastern, no DST (AEST)' },
+  { value: 'Australia/Adelaide',    label: 'Australia Central (ACST)' },
+  { value: 'Australia/Perth',       label: 'Australia Western (AWST)' },
+  { value: 'Asia/Dubai',            label: 'UAE (GST)' },
+  { value: 'Asia/Singapore',        label: 'Singapore (SGT)' },
+  { value: 'Pacific/Auckland',      label: 'New Zealand (NZST/NZDT)' },
+  { value: 'Europe/Berlin',         label: 'Germany (CET)' },
+  { value: 'Europe/Paris',          label: 'France (CET)' },
+];
+
 type DayHours = { open: string | null; close: string | null; closed: boolean };
 type Hours = Record<string, DayHours>;
 
 export default function BusinessHoursScreen() {
   const router = useRouter();
+  const { merchant, refreshMerchant } = useAuth();
   const [hours, setHours] = useState<Hours>({});
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [tzModal, setTzModal] = useState(false);
+  const [tzSearch, setTzSearch] = useState('');
 
   useEffect(() => {
-    api.getSettings().then((res) => {
-      if (res.status === 200) {
-        const m = res.data.merchant ?? res.data;
-        const bh = m.business_hours ?? {};
-        const defaultHours: Hours = {};
-        for (let d = 1; d <= 7; d++) {
-          const key = String(d);
-          defaultHours[key] = bh[key] ?? { open: '09:00', close: '21:00', closed: false };
-        }
-        setHours(defaultHours);
-      }
-      setLoading(false);
-    });
+    const bh = merchant?.business_hours ?? {};
+    const defaultHours: Hours = {};
+    for (let d = 1; d <= 7; d++) {
+      const key = String(d);
+      defaultHours[key] = bh[key] ?? { open: '09:00', close: '21:00', closed: false };
+    }
+    setHours(defaultHours);
+    if (merchant?.timezone) setTimezone(merchant.timezone);
+    setLoading(false);
   }, []);
+
+  const filteredTimezones = useMemo(() => {
+    const q = tzSearch.toLowerCase();
+    return q ? TIMEZONES.filter(tz => tz.label.toLowerCase().includes(q) || tz.value.toLowerCase().includes(q)) : TIMEZONES;
+  }, [tzSearch]);
+
+  const tzLabel = TIMEZONES.find(tz => tz.value === timezone)?.label ?? timezone;
 
   const update = (day: string, field: keyof DayHours, value: any) => {
     setHours((prev) => ({
@@ -48,9 +78,17 @@ export default function BusinessHoursScreen() {
 
   const handleSave = async () => {
     setSaving(true);
-    const res = await api.updateHours(hours as Record<string, unknown>);
+    const res = await api.updateHours(hours as Record<string, unknown>, timezone.trim());
     setSaving(false);
     if (res.status === 200) {
+      if (merchant) {
+        refreshMerchant({
+          ...merchant,
+          business_hours: res.data.business_hours,
+          timezone: res.data.timezone ?? timezone.trim(),
+          is_open: res.data.is_open,
+        });
+      }
       Alert.alert('Saved', 'Business hours updated.');
     } else {
       Alert.alert('Error', res.data?.message ?? 'Failed to update hours.');
@@ -123,6 +161,18 @@ export default function BusinessHoursScreen() {
             </View>
           ))}
 
+          {/* Timezone picker */}
+          <View className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 gap-2">
+            <Text className="font-semibold text-gray-900">Timezone</Text>
+            <TouchableOpacity
+              onPress={() => { setTzSearch(''); setTzModal(true); }}
+              className="flex-row items-center justify-between border border-gray-200 rounded-xl px-3 py-3 bg-gray-50"
+            >
+              <Text className="text-sm text-gray-900 flex-1" numberOfLines={1}>{tzLabel}</Text>
+              <Text className="text-gray-400 text-xs ml-2">▼</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             onPress={handleSave}
             disabled={saving}
@@ -139,6 +189,67 @@ export default function BusinessHoursScreen() {
       </ScrollView>
 
       <BottomTabBar activeTab="settings" />
+
+      {/* Timezone Modal */}
+      <Modal visible={tzModal} transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{
+            backgroundColor: '#fff',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            height: Dimensions.get('window').height * 0.72,
+          }}>
+            {/* Header */}
+            <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827' }}>Select Timezone</Text>
+                <TouchableOpacity onPress={() => setTzModal(false)}>
+                  <Text style={{ color: '#9CA3AF', fontSize: 18 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, gap: 8 }}>
+                <Text style={{ color: '#9CA3AF' }}>🔍</Text>
+                <TextInput
+                  value={tzSearch}
+                  onChangeText={setTzSearch}
+                  placeholder="Search timezone..."
+                  placeholderTextColor="#9CA3AF"
+                  autoFocus
+                  style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: '#111827' }}
+                />
+              </View>
+            </View>
+
+            {/* List */}
+            <FlatList
+              data={filteredTimezones}
+              keyExtractor={item => item.value}
+              keyboardShouldPersistTaps="handled"
+              style={{ flex: 1 }}
+              renderItem={({ item }) => {
+                const selected = item.value === timezone;
+                return (
+                  <TouchableOpacity
+                    onPress={() => { setTimezone(item.value); setTzModal(false); }}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                      paddingHorizontal: 20, paddingVertical: 14,
+                      borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+                      backgroundColor: selected ? '#EEF2FF' : '#fff',
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: selected ? '#4338CA' : '#111827' }}>{item.label}</Text>
+                      <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{item.value}</Text>
+                    </View>
+                    {selected && <Text style={{ color: '#4F46E5', fontSize: 16, marginLeft: 12 }}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

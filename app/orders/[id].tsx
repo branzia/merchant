@@ -9,6 +9,7 @@ import * as api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomTabBar from '@/components/BottomTabBar';
+import { useResponsive } from '@/hooks/useIsTablet';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   pending:   { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
@@ -21,6 +22,7 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { merchant } = useAuth();
+  const { container, isTablet } = useResponsive();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState(false);
@@ -96,7 +98,7 @@ export default function OrderDetailScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="px-4 py-4 gap-4">
+        <View className="px-4 py-4 gap-4" style={container}>
 
           {/* Customer */}
           <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -220,9 +222,23 @@ export default function OrderDetailScreen() {
       <BottomTabBar activeTab="orders" />
 
       {/* Reject Modal */}
-      <Modal visible={rejectModal} transparent animationType="slide">
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
+      <Modal visible={rejectModal} transparent animationType={isTablet ? 'fade' : 'slide'}>
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: isTablet ? 'center' : 'flex-end',
+          alignItems: isTablet ? 'center' : undefined,
+        }}>
+          <View style={{
+            backgroundColor: '#fff',
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 40,
+            borderRadius: isTablet ? 24 : undefined,
+            borderTopLeftRadius: isTablet ? undefined : 24,
+            borderTopRightRadius: isTablet ? undefined : 24,
+            width: isTablet ? 480 : undefined,
+          }}>
             <Text className="text-xl font-bold text-gray-900 mb-4">Reject Order</Text>
             <Text className="text-sm font-medium text-gray-700 mb-1.5">Reason for rejection</Text>
             <TextInput

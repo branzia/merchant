@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@sentry/react-native": "~7.2.0",
     "expo": "~54.0.35",
     "expo-build-properties": "^56.0.19",
     "expo-constants": "~18.0.13",
