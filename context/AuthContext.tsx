@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as api from '@/services/api';
+import { registerForPushNotifications, unregisterPushNotifications } from '@/services/notifications';
 
 type Merchant = Record<string, any>;
 
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(t);
         setMerchant(cached);
         setIsLoading(false); // UI unblocks immediately
+        registerForPushNotifications();
       }
 
       // 2. Refresh merchant profile in the background
@@ -42,7 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(t);
         setMerchant(fresh);
         await api.saveMerchant(fresh);
-        if (!cached) setIsLoading(false); // first-ever launch still waits
+        if (!cached) {
+          setIsLoading(false); // first-ever launch still waits
+          registerForPushNotifications();
+        }
       } else {
         // Token expired or invalid
         await api.clearToken();
@@ -58,9 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await api.saveMerchant(m);
     setToken(t);
     setMerchant(m);
+    registerForPushNotifications();
   };
 
   const signOut = async () => {
+    await api.removeFcmToken().catch(() => {}); // best-effort — needs the still-valid token
+    unregisterPushNotifications();
     await api.logout();
     await api.clearToken(); // also wipes saveMerchant + in-memory cache
     setToken(null);

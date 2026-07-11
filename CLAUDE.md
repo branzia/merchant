@@ -13,7 +13,7 @@ This app talks to the Branzia REST API — it does NOT talk to any database dire
 | Login | Email/phone + password → get Bearer token |
 | Dashboard | Stats overview + recent orders |
 | Orders List | All orders, filterable by status/date/search |
-| Order Detail | Full order info + status action buttons |
+| Order Detail | Full order info + status action buttons + Print Receipt / Print Label buttons |
 | Order Chat | Per-order message thread with buyer |
 | Products List | All products, toggle availability |
 | Product Create/Edit | Name, price, description, category, image, attributes |
@@ -1106,6 +1106,50 @@ Use `data.url` to navigate to the correct screen when the notification is tapped
 
 ---
 
+### Mobile Client Implementation (this app)
+
+FCM is implemented and wired into auth. Client packages:
+- `@react-native-firebase/messaging` — FCM token acquisition, refresh, and background/quit-state message delivery. The server sends via FCM v1 API to raw device tokens, so this app registers a real FCM token (not an Expo push token) — `messaging().getToken()`, not `expo-notifications`' push token API.
+- `@react-native-firebase/app` — required core module for the above.
+- `expo-notifications` — used ONLY to display a local banner when a message arrives while the app is in the **foreground**, and to request the Android 13+ `POST_NOTIFICATIONS` runtime permission. `onMessage()` from RNFirebase fires silently with no UI, so it's manually turned into a local notification via `Notifications.scheduleNotificationAsync()`.
+
+#### Files
+| File | Responsibility |
+|------|-----------------|
+| `services/notifications.ts` | `registerForPushNotifications()`, `unregisterPushNotifications()`, `resolveNotificationRoute()` |
+| `index.ts` | Registers `messaging().setBackgroundMessageHandler()` at module scope, before `expo-router/entry` — required by RNFirebase to run outside the React tree |
+| `context/AuthContext.tsx` | Calls `registerForPushNotifications()` after every successful auth resolution (cached restore, background refresh, and `signIn()`); calls `api.removeFcmToken()` + `unregisterPushNotifications()` in `signOut()` (token removal happens *before* the bearer token is cleared, since it needs auth) |
+| `app/_layout.tsx` | `RootLayoutNav` listens for notification taps via `messaging().onNotificationOpenedApp()` (background→foreground), `messaging().getInitialNotification()` (cold start from quit), and `Notifications.addNotificationResponseReceivedListener()` (taps on the foreground-only local banner) — all three funnel into `resolveNotificationRoute()` → `router.push()` |
+| `services/api.ts` | `registerFcmToken(token)` / `removeFcmToken()` — already existed, calls the endpoints in the API Reference section above |
+
+#### Required setup (not done by this codebase — needs Firebase Console access)
+1. In the **same Firebase project** as `FIREBASE_PROJECT_ID` in the backend's `.env` (the web dashboard's FCM v1 sender already uses this project), add an Android app with package name `com.branzia.merchant`.
+2. Download `google-services.json` from Firebase Console and place it at the Merchant app root (`d:\Live Website\Branzia\Merchant\google-services.json`). This file is gitignored (device/app-identifying config, kept local per environment/CI secret) — every environment that builds this app needs its own copy.
+3. `app.json` → `expo.android.googleServicesFile` already points at `./google-services.json` and the `@react-native-firebase/app` / `@react-native-firebase/messaging` config plugins are registered — running `eas build` or `expo prebuild` will fail with a clear error until step 2 is done.
+4. For EAS cloud builds, upload `google-services.json` as an EAS secret/file rather than committing it: `eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json`, then reference it in `eas.json` build profile `env`.
+5. iOS is not yet configured for this app (no `ios.bundleIdentifier` in `app.json`) — FCM is Android-only until iOS is set up. Adding iOS later needs a `GoogleService-Info.plist` counterpart and `expo.ios.googleServicesFile`.
+
+#### Flow
+```
+App launch / token restored → AuthContext calls registerForPushNotifications()
+  → requests permission (iOS + Android 13 prompt)
+  → messaging().getToken() → api.registerFcmToken(token)
+  → subscribes: onTokenRefresh (re-registers), onMessage (shows local banner)
+
+User signs out → AuthContext.signOut()
+  → api.removeFcmToken()  (must run BEFORE clearToken — needs the bearer token)
+  → unregisterPushNotifications() (drops the onMessage/onTokenRefresh subscriptions)
+  → api.logout() + api.clearToken()
+
+Notification tapped → app/_layout.tsx listeners → resolveNotificationRoute(data.url) → router.push()
+```
+
+#### Known limitations
+- No local dev testing without a real device/emulator with Google Play Services and a valid `google-services.json` — FCM does not work in Expo Go (requires a dev client / EAS build since `@react-native-firebase/*` are native modules).
+- Foreground notifications are shown via a locally-scheduled `expo-notifications` banner, not the raw FCM payload — if `remoteMessage.notification` is absent (a data-only message), no banner is shown; the app should be relying on `notification.title`/`notification.body` per the payload shapes above, which the backend always sends.
+
+---
+
 ## Order Messages (Chat)
 
 Merchants can send and receive messages on a per-order basis. Each order has its own message thread. Buyers initiate from the buyer app; merchants reply from the order detail/chat screen.
@@ -1199,6 +1243,55 @@ Marks all unread **buyer** messages in this order as read. Call when the merchan
 - Call `POST /messages/read` as soon as the chat screen opens
 - Poll every 10–15 seconds while the chat screen is active (no WebSocket yet)
 - Display as chat bubbles: merchant messages on the right, buyer messages on the left
+
+---
+
+## Order Printing (PDF)
+
+Merchants can print an order via a single **"🖨️ Print Receipt"** button on
+the Order Detail screen. **This is fully client-side** — built entirely from
+the `OrderObject` (already fetched for Order Detail) and the merchant's
+`MerchantObject`. No new API endpoints exist or are needed for this feature.
+
+An earlier version of this feature used a Bluetooth thermal (ESC/POS) printer
+library. It was replaced with a PDF-based approach because the library was an
+unverified, community-maintained prerelease with no way to test against real
+hardware, and Bluetooth Classic pairing/permission issues are a common source
+of flaky "can't connect to printer" support tickets. PDF printing is testable
+on any device/emulator with zero hardware, and still supports real thermal
+printers for merchants who have a compatible Android print-service app
+installed (e.g. RawBT) — the OS print dialog routes to whatever printer that
+app registers.
+
+An earlier iteration also had a second "Download Label" button that shared a
+separate compact-label PDF via the share sheet. It was folded into the single
+Print Receipt flow instead — one button, one document, less to explain to a
+merchant using the app one-handed on a delivery run.
+
+### UI flow
+- **Print Receipt** opens the native OS print dialog (`expo-print`'s
+  `Print.printAsync`) with an **invoice-cum-shipping-label** — the standard
+  format for Indian D2C/COD sellers, combining shipping info with full
+  invoice details on one sheet. The dialog lets the merchant pick any
+  configured printer (including a real thermal printer via a print-service
+  app) or choose "Save as PDF".
+- The document includes: a "Sold By" / "Ship To" block, order # + date, a
+  DELIVERY/PICKUP badge, a full itemized table (item, qty, price, amount),
+  subtotal/delivery/total, and — critically — a prominent **"Cash on
+  Delivery — amount to collect"** box when `payment_method === 'cod'` and
+  `payment_status !== 'paid'`, since that's what a delivery agent needs to
+  verify at the door. Otherwise a quieter payment status line is shown.
+  `confirmation_token` is printed as a small order reference at the bottom.
+
+### Files
+| File | Responsibility |
+|------|-----------------|
+| `services/printer.ts` | Builds the invoice-cum-shipping-label HTML, `printReceipt(order, merchant)` (OS print dialog) |
+| `app/orders/[id]/index.tsx` | Print Receipt button |
+
+### Known limitations
+- No barcode/QR code yet (could add one using `order.confirmation_token` if couriers need it).
+- The print dialog's printer list depends entirely on what's configured in Android's system print settings — a merchant with a Bluetooth thermal printer needs a compatible print-service app (e.g. RawBT) installed and configured; this app does not manage that pairing.
 
 ---
 

@@ -46,6 +46,10 @@ credentials.json
 google-service-account.json
 *-service-account*.json
 
+# Firebase app config — device-identifying, keep local per environment
+google-services.json
+GoogleService-Info.plist
+
 # typescript
 *.tsbuildinfo
 

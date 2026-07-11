@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useResponsive } from '@/hooks/useIsTablet';
+import * as printer from '@/services/printer';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   pending:   { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
@@ -28,11 +29,12 @@ export default function OrderDetailScreen() {
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const currencySymbol = merchant?.currency_symbol ?? '';
 
   useEffect(() => {
     api.getOrder(Number(id)).then((res) => {
-      if (res.status === 200) setOrder(res.data);
+      if (res.status === 200) setOrder(res.data.data ?? res.data);
       setLoading(false);
     });
   }, [id]);
@@ -42,10 +44,21 @@ export default function OrderDetailScreen() {
     const res = await api.updateOrderStatus(Number(id), status, reason);
     setUpdating(false);
     if (res.status === 200) {
-      setOrder(res.data);
+      setOrder(res.data.data ?? res.data);
       setRejectModal(false);
     } else {
       Alert.alert('Error', res.data?.message ?? 'Failed to update status.');
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    setPrinting(true);
+    try {
+      await printer.printReceipt(order, merchant);
+    } catch (err: any) {
+      Alert.alert('Print failed', err?.message ?? 'Could not print.');
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -108,7 +121,7 @@ export default function OrderDetailScreen() {
             <View className="px-4 py-3 flex-row items-center gap-3">
               <View className="w-10 h-10 rounded-full bg-indigo-100 items-center justify-center">
                 <Text className="text-indigo-600 font-bold text-base">
-                  {order.customer_name[0].toUpperCase()}
+                  {(order.customer_name?.[0] ?? '?').toUpperCase()}
                 </Text>
               </View>
               <View className="flex-1">
@@ -129,7 +142,7 @@ export default function OrderDetailScreen() {
             <View className="px-4 py-3 gap-2.5">
               {[
                 ['Order Type', order.order_type],
-                ['Payment', order.payment_method.toUpperCase()],
+                ['Payment', order.payment_method?.toUpperCase() ?? '—'],
                 ['Payment Status', order.payment_status],
               ].map(([label, val]) => (
                 <View key={label} className="flex-row justify-between">
@@ -181,6 +194,23 @@ export default function OrderDetailScreen() {
                 <Text className="text-base font-bold text-gray-900">Total</Text>
                 <Text className="text-base font-bold text-gray-900">{currencySymbol}{Number(order.total).toFixed(0)}</Text>
               </View>
+            </View>
+          </View>
+
+          {/* Print */}
+          <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <View className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+              <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Print</Text>
+            </View>
+            <View className="px-4 py-3">
+              <TouchableOpacity
+                onPress={handlePrintReceipt}
+                disabled={printing}
+                className="bg-gray-900 rounded-xl py-3 items-center"
+                style={{ opacity: printing ? 0.7 : 1 }}
+              >
+                <Text className="text-white font-semibold text-sm">🖨️ Print Receipt</Text>
+              </TouchableOpacity>
             </View>
           </View>
 

@@ -1,6 +1,6 @@
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Keyboard,
 } from 'react-native';
 import { ui } from '@/config';
 import { useEffect, useRef, useState } from 'react';
@@ -68,6 +68,15 @@ export default function OrderChatScreen() {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages.length]);
+
+  // Scroll to the latest message once the keyboard has finished animating in,
+  // so it isn't left hidden behind the keyboard when the input is focused.
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+    });
+    return () => sub.remove();
+  }, []);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -160,7 +169,7 @@ export default function OrderChatScreen() {
         </View>
       ) : (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           className="flex-1"
           keyboardVerticalOffset={0}
         >
@@ -173,6 +182,7 @@ export default function OrderChatScreen() {
             renderItem={renderItem}
             contentContainerStyle={{ paddingVertical: 12, paddingBottom: 8 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
                 <Text className="text-5xl mb-3">💬</Text>
